@@ -16,6 +16,7 @@
       position: absolute;
       font-size: 65px;
       line-height: 38px;
+      will-change: transform;
     }
   </style>
 </head>
@@ -40,8 +41,7 @@
       x += dx;
       y += dy;
 
-      emoji.style.left = x + 'px';
-      emoji.style.top = y + 'px';
+      emoji.style.transform = `translate(${x}px, ${y}px)`;
 
       requestAnimationFrame(bounce);
     }
