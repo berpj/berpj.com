@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Bangkok, past and present</title>
+  <style>
+    html, body {
+      margin: 0;
+      padding: 0;
+      height: 100%;
+      background-color: black;
+      color: white;
+      font-family: sans-serif;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    h1 {
+      margin: 50px 0 40px;
+      font-size: 2.5rem;
+      text-align: center;
+      font-weight: 400;
+    }
+
+    .slider {
+      width: 90%;
+      height: 400px;
+      margin-bottom: 10px;
+    }
+
+    .description {
+      margin-bottom: 40px;
+      font-size: 1rem;
+      color: #ccc;
+      text-align: center;
+      max-width: 90%;
+      margin-top: 0px;
+      padding-top: 0px;
+    }
+  </style>
+  <script src="https://cdn.jsdelivr.net/npm/before-after-slider@1.0.0/dist/slider.bundle.js"></script>
+</head>
+<body>
+  <h1>Bangkok, past and present</h1>
+
+  <div id="slider1" class="slider"></div>
+  <p class="description">#1: Maitri Chit Junction, Bangkok</p>
+
+  <div id="slider2" class="slider"></div>
+  <p class="description">#2: Intersection between Song Sawat Road and Yaowarat Road, Bangkok</p>
+
+  <script>
+    new SliderBar({
+      el: '#slider1',
+      beforeImg: 'https://placehold.co/800x400?text=BKK+Before+1',
+      afterImg: 'https://placehold.co/800x400?text=BKK+After+1',
+      width: "100%",
+      height: "100%",
+      line: true,
+      lineColor: "rgba(255,255,255,0.5)"
+    });
+
+    new SliderBar({
+      el: '#slider2',
+      beforeImg: 'https://placehold.co/800x400?text=BKK+Before+2',
+      afterImg: 'https://placehold.co/800x400?text=BKK+After+2',
+      width: "100%",
+      height: "100%",
+      line: true,
+      lineColor: "rgba(255,255,255,0.5)"
+    });
+  </script>
+</body>
+</html>
