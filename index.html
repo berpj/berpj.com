@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>berpj.com</title>
+  <style>
+    html, body {
+      margin: 0;
+      padding: 0;
+      height: 100%;
+      overflow: hidden;
+      background-color: black;
+    }
+    #emoji {
+      position: absolute;
+      font-size: 65px;
+      line-height: 38px;
+    }
+  </style>
+</head>
+<body>
+  <div id="emoji">📷</div>
+
+  <script>
+    const emoji = document.getElementById('emoji');
+    let x = 100;
+    let y = 100;
+    let dx = 3;
+    let dy = 3;
+
+    function bounce() {
+      const rect = emoji.getBoundingClientRect();
+      const winWidth = window.innerWidth;
+      const winHeight = window.innerHeight;
+
+      if (x + rect.width >= winWidth || x <= 0) dx = -dx;
+      if (y + rect.height >= winHeight || y <= 0) dy = -dy;
+
+      x += dx;
+      y += dy;
+
+      emoji.style.left = x + 'px';
+      emoji.style.top = y + 'px';
+
+      requestAnimationFrame(bounce);
+    }
+
+    bounce();
+  </script>
+</body>
+</html>
