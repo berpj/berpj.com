@@ -177,7 +177,11 @@
       clearInterval(timerInterval);
       document.querySelectorAll('.emoji').forEach(e => e.remove());
       instructions.textContent = "Game over!";
-      alert(message);
+
+      
+      setTimeout(() => {
+        alert(message);
+        }, 250)
 
       startButton.style.display = "block";
     }
