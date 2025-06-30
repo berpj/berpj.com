@@ -36,73 +36,78 @@
   <a href="/cat" id="emoji2">🐱</a>
 
   <script>
-    const emoji = document.getElementById('emoji');
-    const emoji2 = document.getElementById('emoji2');
-    
-    // First emoji variables
-    let x = 100;
-    let y = 100;
-    let dx = 2;
-    let dy = 2;
-    
-    // Second emoji variables
-    let x2 = 300;
-    let y2 = 200;
-    let dx2 = -1.5;
-    let dy2 = 1.8;
+    const emojis = [
+      {
+        el: document.getElementById('emoji'),
+        x: 100,
+        y: 100,
+        dx: 2,
+        dy: 2,
+        radius: 30,
+      },
+      {
+        el: document.getElementById('emoji2'),
+        x: 300,
+        y: 200,
+        dx: -1.5,
+        dy: 1.8,
+        radius: 30,
+      },
+    ];
 
     function bounce() {
-      const rect = emoji.getBoundingClientRect();
-      const rect2 = emoji2.getBoundingClientRect();
       const winWidth = window.innerWidth;
       const winHeight = window.innerHeight;
 
-      // Check collision between emojis
-      const centerX1 = x + rect.width / 2;
-      const centerY1 = y + rect.height / 2;
-      const centerX2 = x2 + rect2.width / 2;
-      const centerY2 = y2 + rect2.height / 2;
-      
-      const distance = Math.sqrt((centerX2 - centerX1) ** 2 + (centerY2 - centerY1) ** 2);
-      const minDistance = (rect.width + rect2.width) / 2;
-      
-      if (distance < minDistance) {
-        // Swap velocities to simulate bounce
-        const tempDx = dx;
-        const tempDy = dy;
-        dx = dx2;
-        dy = dy2;
-        dx2 = tempDx;
-        dy2 = tempDy;
-        
-        // Separate emojis to prevent sticking
-        const separationX = (centerX2 - centerX1) / distance;
-        const separationY = (centerY2 - centerY1) / distance;
-        const separation = (minDistance - distance) / 2;
-        
-        x -= separationX * separation;
-        y -= separationY * separation;
-        x2 += separationX * separation;
-        y2 += separationY * separation;
+      emojis.forEach(e => {
+        if (e.x + e.radius * 2 >= winWidth || e.x <= 0) e.dx = -e.dx;
+        if (e.y + e.radius * 2 >= winHeight || e.y <= 0) e.dy = -e.dy;
+
+        e.x += e.dx;
+        e.y += e.dy;
+
+        if (e.x < 0) e.x = 0;
+        if (e.x + e.radius * 2 > winWidth) e.x = winWidth - e.radius * 2;
+        if (e.y < 0) e.y = 0;
+        if (e.y + e.radius * 2 > winHeight) e.y = winHeight - e.radius * 2;
+      });
+
+      for (let i = 0; i < emojis.length; i++) {
+        for (let j = i + 1; j < emojis.length; j++) {
+          const e1 = emojis[i];
+          const e2 = emojis[j];
+
+          const centerX1 = e1.x + e1.radius;
+          const centerY1 = e1.y + e1.radius;
+          const centerX2 = e2.x + e2.radius;
+          const centerY2 = e2.y + e2.radius;
+          
+          const distance = Math.sqrt((centerX2 - centerX1) ** 2 + (centerY2 - centerY1) ** 2);
+          const minDistance = e1.radius + e2.radius;
+          
+          if (distance < minDistance) {
+            const tempDx = e1.dx;
+            const tempDy = e1.dy;
+            e1.dx = e2.dx;
+            e1.dy = e2.dy;
+            e2.dx = tempDx;
+            e2.dy = tempDy;
+            
+            const overlap = minDistance - distance;
+            const separationX = (centerX2 - centerX1) / distance;
+            const separationY = (centerY2 - centerY1) / distance;
+            
+            e1.x -= (separationX * overlap) / 2;
+            e1.y -= (separationY * overlap) / 2;
+            e2.x += (separationX * overlap) / 2;
+            e2.y += (separationY * overlap) / 2;
+          }
+        }
       }
 
-      // First emoji collision detection with walls
-      if (x + rect.width >= winWidth || x <= 0) dx = -dx;
-      if (y + rect.height >= winHeight || y <= 0) dy = -dy;
-
-      // Second emoji collision detection with walls
-      if (x2 + rect2.width >= winWidth || x2 <= 0) dx2 = -dx2;
-      if (y2 + rect2.height >= winHeight || y2 <= 0) dy2 = -dy2;
-
-      // Update positions
-      x += dx;
-      y += dy;
-      x2 += dx2;
-      y2 += dy2;
-
-      // Apply transforms
-      emoji.style.transform = `translate(${x}px, ${y}px)`;
-      emoji2.style.transform = `translate(${x2}px, ${y2}px)`;
+      emojis.forEach(e => {
+        e.el.style.transform = `translate(${e.x}px, ${e.y}px)`;
+      });
 
       requestAnimationFrame(bounce);
     }
