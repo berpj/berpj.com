@@ -16,7 +16,7 @@
       text-decoration: none;
       color: inherit;
     }
-    #emoji {
+    #emoji, #emoji2 {
       position: absolute;
       font-size: 65px;
       line-height: 38px;
@@ -26,26 +26,76 @@
 </head>
 <body>
   <a href="/bangkok-past-and-present" id="emoji">📷</a>
+  <a href="/cat" id="emoji2">🐱</a>
 
   <script>
     const emoji = document.getElementById('emoji');
+    const emoji2 = document.getElementById('emoji2');
+    
+    // First emoji variables
     let x = 100;
     let y = 100;
-    let dx = 3;
-    let dy = 3;
+    let dx = 2;
+    let dy = 2;
+    
+    // Second emoji variables
+    let x2 = 300;
+    let y2 = 200;
+    let dx2 = -1.5;
+    let dy2 = 1.8;
 
     function bounce() {
       const rect = emoji.getBoundingClientRect();
+      const rect2 = emoji2.getBoundingClientRect();
       const winWidth = window.innerWidth;
       const winHeight = window.innerHeight;
 
+      // Check collision between emojis
+      const centerX1 = x + rect.width / 2;
+      const centerY1 = y + rect.height / 2;
+      const centerX2 = x2 + rect2.width / 2;
+      const centerY2 = y2 + rect2.height / 2;
+      
+      const distance = Math.sqrt((centerX2 - centerX1) ** 2 + (centerY2 - centerY1) ** 2);
+      const minDistance = (rect.width + rect2.width) / 2;
+      
+      if (distance < minDistance) {
+        // Swap velocities to simulate bounce
+        const tempDx = dx;
+        const tempDy = dy;
+        dx = dx2;
+        dy = dy2;
+        dx2 = tempDx;
+        dy2 = tempDy;
+        
+        // Separate emojis to prevent sticking
+        const separationX = (centerX2 - centerX1) / distance;
+        const separationY = (centerY2 - centerY1) / distance;
+        const separation = (minDistance - distance) / 2;
+        
+        x -= separationX * separation;
+        y -= separationY * separation;
+        x2 += separationX * separation;
+        y2 += separationY * separation;
+      }
+
+      // First emoji collision detection with walls
       if (x + rect.width >= winWidth || x <= 0) dx = -dx;
       if (y + rect.height >= winHeight || y <= 0) dy = -dy;
 
+      // Second emoji collision detection with walls
+      if (x2 + rect2.width >= winWidth || x2 <= 0) dx2 = -dx2;
+      if (y2 + rect2.height >= winHeight || y2 <= 0) dy2 = -dy2;
+
+      // Update positions
       x += dx;
       y += dy;
+      x2 += dx2;
+      y2 += dy2;
 
+      // Apply transforms
       emoji.style.transform = `translate(${x}px, ${y}px)`;
+      emoji2.style.transform = `translate(${x2}px, ${y2}px)`;
 
       requestAnimationFrame(bounce);
     }
