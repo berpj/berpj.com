@@ -16,7 +16,8 @@
       margin: 0;
       padding: 0;
       height: 100%;
-      background-color: #eee;
+      background-color: black;
+      color: white;
       font-family: Arial, sans-serif;
       display: flex;
       justify-content: center;
@@ -42,10 +43,10 @@
       left: 50%;
       transform: translateX(-50%);
       font-size: 1.5rem;
-      background: #f582ae;
+      background: #007bff;
       padding: 10px 20px;
       border-radius: 10px;
-      box-shadow: 2px 2px 5px rgba(0,0,0,0.2);
+      box-shadow: 2px 2px 5px rgba(255,255,255,0.2);
       user-select: none;
     }
 
@@ -60,16 +61,16 @@
       transform: translate(-50%, -50%);
       font-size: 3rem;
       padding: 20px 40px;
-      background: #f582ae;
+      background: #007bff;
       border: none;
       border-radius: 15px;
-      box-shadow: 3px 3px 8px rgba(0,0,0,0.3);
+      box-shadow: 3px 3px 8px rgba(255,255,255,0.3);
       cursor: pointer;
       user-select: none;
       transition: background-color 0.3s;
     }
     #startButton:hover {
-      background-color: #e06187;
+      background-color: #0056b3;
     }
   </style>
 </head>
@@ -145,7 +146,7 @@
           emoji.remove();
           spawnEmojis();
         } else {
-          endGame("Game Over! You clicked the wrong emoji.");
+          endGame("Game Over! You clicked the wrong emoji. YOU SUCK!");
         }
       });
     }
@@ -169,7 +170,7 @@
         timerDisplay.textContent = `Time left: ${gameTime}s`;
         if (gameTime <= 0) {
           clearInterval(timerInterval);
-          endGame(`Time's up! Your score: ${score}. You SUCK!`);
+          endGame(`Time's up! Your score: ${score}`);
         }
       }, 1000);
     }
