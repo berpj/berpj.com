@@ -1,9 +1,11 @@
+import {DISTRICT_BBOX,SCENERY_MARGIN} from './district.mjs';
 import {distance} from '../game/rules.mjs';
 export function project(coordinate,origin){return {x:(coordinate[0]-origin[0])*111320*Math.cos(origin[1]*Math.PI/180),z:-(coordinate[1]-origin[1])*110574};}
 export function widthFor(tags){const explicit=parseFloat(tags.width);if(explicit>2&&explicit<45)return explicit;const lanes=parseInt(tags.lanes)||({primary:tags.oneway==='yes'?3:6,secondary:3,tertiary:2,residential:2,service:1,living_street:1}[tags.highway]||2);return Math.max(5,Math.min(28,lanes*2.9+.4));}
 export function prepareMap(data){
-  const origin=data.origin;const bbox=data.bbox;const bounds={min:project([bbox[0],bbox[3]],origin),max:project([bbox[2],bbox[1]],origin)};
+  const origin=data.origin;const bbox=DISTRICT_BBOX.map((v,i)=>i<2?Math.max(v,data.bbox[i]):Math.min(v,data.bbox[i]));const bounds={min:project([bbox[0],bbox[3]],origin),max:project([bbox[2],bbox[1]],origin)};
   const inside=p=>p.x>=bounds.min.x&&p.x<=bounds.max.x&&p.z>=bounds.min.z&&p.z<=bounds.max.z;
+  const insideScenery=p=>p.x>=bounds.min.x-SCENERY_MARGIN&&p.x<=bounds.max.x+SCENERY_MARGIN&&p.z>=bounds.min.z-SCENERY_MARGIN&&p.z<=bounds.max.z+SCENERY_MARGIN;
   const roads=data.roads.filter(r=>r.drivable&&!['private','no'].includes(r.tags.access)&&!['parking_aisle','driveway'].includes(r.tags.service)&&!['motorway','motorway_link'].includes(r.tags.highway)&&r.tags.tunnel!=='yes').map(r=>({...r,points:r.coordinates.map(p=>project(p,origin)),width:widthFor(r.tags)}));
   const nodes=new Map();const segments=[];const graph=new Map(),legalGraph=new Map();
   const add=(id,p)=>{if(!nodes.has(id)){nodes.set(id,p);graph.set(id,[]);legalGraph.set(id,[]);}};
@@ -43,5 +45,5 @@ export function prepareMap(data){
     const points=[from,{x:start.x,z:start.z},...ids.map(id=>nodes.get(id)),{x:finish.x,z:finish.z},to];
     return {length:best+distance(from,start)+distance(to,finish),points:points.filter((p,i)=>!i||distance(p,points[i-1])>.05)};
   }
-  return {data,origin,bounds,inside,roads,segments,graph,legalGraph,nodes,main,nearest,spawn,anchors,destinations,route,project:p=>project(p,origin)};
+  return {data,origin,bounds,inside,insideScenery,district:{bbox,sceneryMargin:SCENERY_MARGIN},roads,segments,graph,legalGraph,nodes,main,nearest,spawn,anchors,destinations,route,project:p=>project(p,origin)};
 }

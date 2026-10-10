@@ -1,0 +1,20 @@
+{
+  "title": "Piphat in Wat Khung Taphao",
+  "creator": "Tevaprapas (เทวประภาส มากคล้าย)",
+  "recorded_year": 2007,
+  "recorded_location": "Wat Khung Taphao, Uttaradit, Thailand",
+  "description": "Live traditional Thai piphat ensemble. Not a Bangkok field recording. Not AI-generated.",
+  "source_page": "https://commons.wikimedia.org/wiki/File:Piphat_in_Wat_Khung_Taphao.ogg",
+  "source_revision": "https://commons.wikimedia.org/w/index.php?title=File:Piphat_in_Wat_Khung_Taphao.ogg&oldid=475214999",
+  "source_url": "https://upload.wikimedia.org/wikipedia/commons/2/27/Piphat_in_Wat_Khung_Taphao.ogg",
+  "source_sha256": "79f7bf73d8ece401b2be84760bb02bab389d6f64f77c3f19d0fd9c01c8f0d010",
+  "license": "CC-BY-SA-3.0",
+  "license_url": "https://creativecommons.org/licenses/by-sa/3.0/",
+  "adaptation_license": "CC-BY-SA-3.0",
+  "retrieved": "2026-10-10",
+  "file": "thai-piphat-radio.mp3",
+  "bytes": 14461081,
+  "sha256": "41648e4ac6b744dbab6e837bae9430541bec582435ef74a0d3bac28688e3cfe0",
+  "original_duration_seconds": 1446.008,
+  "processing": "Full performance, mono MP3 80 kbit/s 32 kHz. FFmpeg highpass=f=65,loudnorm=I=-18:TP=-2:LRA=11,afade=t=in:d=0.5,afade=t=out:st=1444:d=2. No melody synthesis or AI processing."
+}

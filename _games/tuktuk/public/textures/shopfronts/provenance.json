@@ -56,6 +56,25 @@
       "bytes": 208706,
       "sha256": "39e309aa7c056ed7869e7ae9df33ba6bda91a15b6f2df291385b44905a6ca09f",
       "encoding": "1024x1024 WebP, quality 88, original composition preserved"
+    },
+    {
+      "id": "bangkok-local-atlas",
+      "file": "bangkok-local-atlas.png",
+      "generator": "Built-in image_gen",
+      "created": "2026-10-10",
+      "purpose": "Six original fictional Bangkok shopfronts in one 3-column, 2-row atlas",
+      "prompt": "Create ONE production game texture atlas, photorealistic-natural. A perfectly aligned 3 columns by 2 rows grid, six equal rectangular panels, no margins or gutters, 1536x1024 landscape if possible. Each panel is a different Bangkok Sukhumvit ground-floor shophouse facade, photographed EXACTLY straight-on orthographic at eye level with parallel verticals, flat overcast daylight and zero dramatic shadows. Each individual panel fills its entire cell, showing a complete 4m-wide, 3.6m-high shop bay from pavement threshold to its fascia sign. No sky, upper floors, people, animals, cars, trees, foreground street, perspective angled side walls or watermark. These will map onto opaque 3D walls in a realistic browser driving game. TOP LEFT: old Thai-Chinese noodle restaurant, red and ivory fascia 'NOODLES', stainless noodle pots, bowls, red stools visible through open doorway. TOP MIDDLE: contemporary Bangkok specialty coffee shop, warm teak and dark green fascia 'COFFEE', espresso counter and plants inside. TOP RIGHT: warm yellow Thai bakery 'BAKERY', bread and pastries behind glass, teal metal frames. BOTTOM LEFT: local florist 'FLOWERS', faded pink fascia, tightly packed bouquets and flower buckets entirely inside shop doorway. BOTTOM MIDDLE: blue and yellow Thai hardware shop 'HARDWARE', packed tools, pipes and paint tins on shelves. BOTTOM RIGHT: orange-green fruit and juice shop 'FRESH FRUIT', bananas mangoes coconuts and bright produce in crates, visible juicer counter. Include small secondary Thai lettering as subtle local detail; English words exactly as provided, easy to read. Authentic humid-weather wear, chipped paint, realistic tiles, shutters, practical lighting, rich diverse colours, not cartoon. Every cell separate and full bleed. No outer border or panel labels. Preserve crisp fine detail for close driving views.",
+      "panels": [
+        "noodles",
+        "coffee",
+        "bakery",
+        "florist",
+        "hardware",
+        "fruit"
+      ],
+      "encoding": "Original 1536x1024 PNG; no raster edits; UV cropping at runtime",
+      "sha256": "f2042918f38da1fab135db0c03a0067bbb2118e392d949731faf379496fd9059",
+      "bytes": 3243938
     }
   ]
 }

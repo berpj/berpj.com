@@ -1,0 +1,18 @@
+{
+  "title": "NSU Prinz - troblja (vehicle horn)",
+  "author": "Work With Sounds / Technical Museum of Slovenia",
+  "recordist": "Boštjan Troha",
+  "recorded": "2015-04-16",
+  "source_page": "https://commons.wikimedia.org/wiki/File:WWS_CarPrinzNSU1200C8211horn.ogg",
+  "source_url": "https://upload.wikimedia.org/wikipedia/commons/4/4c/WWS_CarPrinzNSU1200C8211horn.ogg",
+  "source_sha256": "710f47ec6773866f3aa77a84c36b24760f1d0d8459fe325847b6d05a0bd10616",
+  "license": "CC-BY-4.0",
+  "license_url": "https://creativecommons.org/licenses/by/4.0/",
+  "file": "tuktuk-honk.wav",
+  "bytes": 40322,
+  "sha256": "177b1209b8c2d3e75e7e017876f6d35aa5ad51d29b441f150caae2c422ec6d3c",
+  "duration_seconds": 0.62934375,
+  "processing": "Excerpt 0.28-0.90 seconds. Mono PCM16 WAV at 32 kHz. High-pass 140 Hz, low-pass 6500 Hz, 4 ms fade-in and 50 ms fade-out from 0.57 s. Peak normalized to -1.5 dBFS. No pitch shift.",
+  "note": "A real vintage vehicle horn used as an arcade tuk-tuk sound, not a recording of a Bangkok tuk-tuk.",
+  "retrieved": "2026-10-10"
+}

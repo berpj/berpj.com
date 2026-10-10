@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {Controls} from '../src/game/input.js';
 
-function setup(t){
+function setup(t,onHorn=()=>{}){
   const handlers={},pads=[];
   const globals={window:{addEventListener:(name,fn)=>handlers[name]=fn},navigator:{getGamepads:()=>pads},matchMedia:()=>({matches:false}),HTMLInputElement:class {},HTMLSelectElement:class {}};
   for(const [name,value] of Object.entries(globals)){
@@ -10,7 +10,7 @@ function setup(t){
     Object.defineProperty(globalThis,name,{value,configurable:true,writable:true});
     t.after(()=>descriptor?Object.defineProperty(globalThis,name,descriptor):delete globalThis[name]);
   }
-  return {controls:new Controls(()=>{},()=>{},()=>{}),handlers,pads};
+  return {controls:new Controls(()=>{},onHorn,()=>{}),handlers,pads};
 }
 test('keyboard burst is held across polls, immediately reusable, and cleared on blur',t=>{
   const {controls:c,handlers:h}=setup(t);
@@ -42,4 +42,20 @@ test('touch burst holds and releases on up, cancel, capture loss and pause clear
     if(end==='clear')c.clear();else handlers[end]();
     assert.equal(c.poll(1/60).dash,false);
   }
+});
+
+test('H honks once per press, can be used again, and ignores typing in settings',t=>{
+  let honks=0;
+  const {handlers:h}=setup(t,()=>honks++);
+  h.keydown({code:'KeyH',repeat:false,target:{}});
+  assert.equal(honks,1);
+  for(let i=0;i<10;i++)h.keydown({code:'KeyH',repeat:true,target:{}});
+  assert.equal(honks,1);
+  h.keyup({code:'KeyH'});
+  h.keydown({code:'KeyH',repeat:false,target:{}});
+  assert.equal(honks,2);
+  for(const target of [new HTMLInputElement(),new HTMLSelectElement()]){
+    h.keydown({code:'KeyH',repeat:false,target});
+  }
+  assert.equal(honks,2);
 });

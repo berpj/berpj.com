@@ -8,6 +8,12 @@ export const SHOP_STYLES = [
   { id: 'tailor', thai: 'ตัดสูท', accent: '#544437', frame: '#96866e', weight: 16 },
   { id: 'pizzeria', thai: 'พิซซ่า', accent: '#8f4236', frame: '#a8aa93', weight: 16 },
   { id: 'laundry', thai: 'ซักอบรีด', accent: '#547f9e', frame: '#a7b5bb', weight: 14 },
+  { id: 'noodles', thai: 'ก๋วยเตี๋ยว', accent: '#a8493b', frame: '#b9aa8d', weight: 20, atlas: [0,0] },
+  { id: 'coffee', thai: 'กาแฟ', accent: '#35594e', frame: '#947656', weight: 18, atlas: [1,0] },
+  { id: 'bakery', thai: 'เบเกอรี่', accent: '#c69c3e', frame: '#648b89', weight: 13, atlas: [2,0] },
+  { id: 'florist', thai: 'ดอกไม้', accent: '#b9808b', frame: '#adb395', weight: 10, atlas: [0,1] },
+  { id: 'hardware', thai: 'อุปกรณ์ช่าง', accent: '#3b6497', frame: '#b2aa89', weight: 10, atlas: [1,1] },
+  { id: 'fruit', thai: 'ผลไม้สด', accent: '#ce7439', frame: '#719176', weight: 15, atlas: [2,1] },
 ];
 
 const hash = value => { let h = 2166136261; for (const c of String(value)) h = Math.imul(h ^ c.charCodeAt(0), 16777619); return h >>> 0; };
@@ -21,11 +27,14 @@ export function createShopfrontSystem(THREE, map, layout, { mobile = false } = {
   const range = mobile ? 245 : 370;
   const solid = new THREE.MeshStandardMaterial({ color: '#ffffff', vertexColors: true, roughness: .89 });
   const metal = new THREE.MeshStandardMaterial({ color: '#ffffff', vertexColors: true, roughness: .53, metalness: .36 });
+  let atlasMaterial=null;
   const materials = SHOP_STYLES.map(style => {
+    if(style.atlas&&atlasMaterial)return atlasMaterial;
     const material = new THREE.MeshStandardMaterial({ color: '#ffffff', roughness: .9, side: THREE.DoubleSide });
-    material.name = `${style.id} facade photograph`;
+    material.name = style.atlas?'Local Bangkok shop atlas':`${style.id} facade photograph`;
+    if(style.atlas)atlasMaterial=material;
     if (typeof document !== 'undefined') {
-      const texture = new THREE.TextureLoader().load(assetUrl(`textures/shopfronts/${style.id}.webp`), undefined, undefined, () => {
+      const texture = new THREE.TextureLoader().load(assetUrl(style.atlas?'textures/shopfronts/bangkok-local-atlas.png':`textures/shopfronts/${style.id}.webp`), undefined, undefined, () => {
         material.map = null; material.color.set(style.accent); material.needsUpdate = true;
       });
       texture.colorSpace = THREE.SRGBColorSpace; texture.anisotropy = mobile ? 4 : 8;
@@ -36,7 +45,7 @@ export function createShopfrontSystem(THREE, map, layout, { mobile = false } = {
   });
   let plaqueMaterial = null;
   if (typeof document !== 'undefined') {
-    const canvas = document.createElement('canvas'); canvas.width = 512; canvas.height = 768;
+    const canvas = document.createElement('canvas'); canvas.width = 512; canvas.height = SHOP_STYLES.length*128;
     const ctx = canvas.getContext('2d');
     SHOP_STYLES.forEach((style, i) => {
       ctx.fillStyle = style.accent; ctx.fillRect(0, i * 128, 512, 128);
@@ -94,9 +103,10 @@ export function createShopfrontSystem(THREE, map, layout, { mobile = false } = {
     chunk.centers.push({ x: site.x, z: site.z });
     const height = Math.min(3.6, site.height - site.base);
     const photoWidth = Math.min(4, site.width - .09), span = photoWidth / 4;
-    const u0 = (1 - span) / 2, u1 = 1 - u0;
+    let u0 = (1 - span) / 2, u1 = 1 - u0, v0=0, v1=height/3.6;
+    if(style.atlas){const [col,row]=style.atlas;u0=(col+u0+.006)/3;u1=(col+u1-.006)/3;v0=(1-row+.006)/2;v1=(1-row+v1-.006)/2;}
     const bottomLeft = point(site, -photoWidth / 2, .024), bottomRight = point(site, photoWidth / 2, .024);
-    quad(chunk, [[bottomLeft.x, site.base, bottomLeft.z], [bottomRight.x, site.base, bottomRight.z], [bottomRight.x, site.base + height, bottomRight.z], [bottomLeft.x, site.base + height, bottomLeft.z]], [u0, 0, u1, 0, u1, height / 3.6, u0, height / 3.6], materials[index]);
+    quad(chunk, [[bottomLeft.x, site.base, bottomLeft.z], [bottomRight.x, site.base, bottomRight.z], [bottomRight.x, site.base + height, bottomRight.z], [bottomLeft.x, site.base + height, bottomLeft.z]], [u0, v0, u1, v0, u1, v1, u0, v1], materials[index]);
     // Wide bays retain a 4m photograph and get narrow rendered jamb infills;
     // narrower bays crop symmetrically instead of distorting doors or signage.
     const gap = (site.width - photoWidth) / 2;
@@ -122,7 +132,7 @@ export function createShopfrontSystem(THREE, map, layout, { mobile = false } = {
         const x = site.width / 2 - .23, yaw = site.yaw + Math.PI / 2;
         const center = point(site, x, .34), cs = Math.cos(yaw), sn = Math.sin(yaw), w = .50, h = .25;
         const a = { x: center.x - cs * w / 2, z: center.z + sn * w / 2 }, b = { x: center.x + cs * w / 2, z: center.z - sn * w / 2 };
-        const v0 = (5 - index) / 6, v1 = v0 + 1 / 6;
+        const v0 = (SHOP_STYLES.length - 1 - index) / SHOP_STYLES.length, v1 = v0 + 1 / SHOP_STYLES.length;
         quad(chunk, [[a.x, 2.39, a.z], [b.x, 2.39, b.z], [b.x, 2.39 + h, b.z], [a.x, 2.39 + h, a.z]], [0, v0, 1, v0, 1, v1, 0, v1], plaqueMaterial);
         addBox(chunk, site, x, 2.66, .33, .027, .024, .68, '#6d776e', metal);
       }
@@ -176,9 +186,9 @@ export function createShopfrontSystem(THREE, map, layout, { mobile = false } = {
         continue;
       }
       let index;
-      if (nearIndex < 24) index = [0, 2, 1, 4, 3, 5][nearIndex++ % 6];
+      if (nearIndex < 48) index = [6,7,0,8,2,9,4,10,3,11,5,1][nearIndex++ % SHOP_STYLES.length];
       else {
-        let value = hash(site.key) % 100; index = 0;
+        let value = hash(site.key) % SHOP_STYLES.reduce((sum,style)=>sum+style.weight,0); index = 0;
         while (index < SHOP_STYLES.length - 1 && value >= SHOP_STYLES[index].weight) value -= SHOP_STYLES[index++].weight;
       }
       const neighbors = sites.filter(other => {

@@ -1,4 +1,5 @@
 import polygonClipping from 'polygon-clipping';
+import {planDistrictInfill} from './districtInfill.mjs';
 
 // The source database remains untouched. These are derived gameplay polygons in metres.
 export const ROAD_CLEARANCE = .35;
@@ -171,9 +172,8 @@ export function prepareBuildingLayout(map, { mobile = false } = {}) {
   const started = performance.now(), clearance = createRoadClearance(map), buildings = [];
   const stats = { selected: 0, emitted: 0, clipped: 0, dropped: 0, skippedBts: 0, rejectedInvalid: 0, discardedFragments: 0, sourceArea: 0, renderArea: 0 };
   const selected = map.data.buildings.map(building => ({ building, first: map.project(building.coordinates[0]) }))
-    .filter(({ first }) => map.inside(first) && Math.hypot(first.x - map.spawn.x, first.z - map.spawn.z) <= 1500)
-    .sort((a, b) => Math.hypot(a.first.x - map.spawn.x, a.first.z - map.spawn.z) - Math.hypot(b.first.x - map.spawn.x, b.first.z - map.spawn.z))
-    .slice(0, mobile ? 1900 : 3000);
+    .filter(({ building }) => building.coordinates.some(coordinate=>(map.insideScenery||map.inside)(map.project(coordinate))))
+    .sort((a, b) => Math.hypot(a.first.x - map.spawn.x, a.first.z - map.spawn.z) - Math.hypot(b.first.x - map.spawn.x, b.first.z - map.spawn.z));
   for (const { building } of selected) {
     stats.selected++;
     if (isAuthoredBtsStation(building)) { stats.skippedBts++; continue; }
@@ -202,6 +202,9 @@ export function prepareBuildingLayout(map, { mobile = false } = {}) {
     }
   }
   clearance.setBuildings(buildings);
+  const infill=map.district?planDistrictInfill(map,clearance):[];
+  buildings.push(...infill);stats.authoredInfill=infill.length;
+  for(const b of infill){stats.sourceArea+=b.sourceArea;stats.renderArea+=b.renderArea;}
   stats.emitted = buildings.length; stats.removedArea = stats.sourceArea - stats.renderArea; stats.elapsedMs = performance.now() - started;
   const result = { buildings, clearance, stats }; cached.set(key, result); return result;
 }

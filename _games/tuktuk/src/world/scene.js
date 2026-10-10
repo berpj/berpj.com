@@ -1,3 +1,5 @@
+import {buildingAppearance} from './district.mjs';
+import {createDistrictGround} from './districtGround.js';
 import {createHumanCharacter} from '../assets/humanCharacter.js';
 import * as THREE from 'three';
 import {mergeGeometries} from 'three/addons/utils/BufferGeometryUtils.js';
@@ -28,7 +30,7 @@ function box(w,h,d,material,x,y,z,rotation=0){
 class Batch {
   constructor(){this.positions=[];this.uvs=[];this.indices=[];this.colors=[];this.tint=null;}
   quad(a,b,c,d,uv=[0,0,1,0,1,1,0,1]){const i=this.positions.length/3;for(const p of [a,b,c,d]){this.positions.push(...p);if(this.tint)this.colors.push(this.tint.r,this.tint.g,this.tint.b);}this.uvs.push(...uv);this.indices.push(i,i+1,i+2,i,i+2,i+3);}
-  triangle(a,b,c){const i=this.positions.length/3;for(const p of [a,b,c]){this.positions.push(...p);this.uvs.push(p[0]/8,p[2]/8);}this.indices.push(i,i+1,i+2);}
+  triangle(a,b,c){const i=this.positions.length/3;for(const p of [a,b,c]){this.positions.push(...p);this.uvs.push(p[0]/8,p[2]/8);if(this.tint)this.colors.push(this.tint.r,this.tint.g,this.tint.b);}this.indices.push(i,i+1,i+2);}
   mesh(material){if(!this.positions.length)return null;const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.Float32BufferAttribute(this.positions,3));g.setAttribute('uv',new THREE.Float32BufferAttribute(this.uvs,2));if(this.colors.length===this.positions.length){g.setAttribute('color',new THREE.Float32BufferAttribute(this.colors,3));material.vertexColors=true;}g.setIndex(this.indices);g.computeVertexNormals();const m=new THREE.Mesh(g,material);m.receiveShadow=true;return m;}
 }
 function ribbon(batch,a,b,width,y,uvscale=.12){const len=distance(a,b);if(len<.01)return;const x=(b.z-a.z)/len*width/2,z=-(b.x-a.x)/len*width/2;batch.quad([a.x-x,y,a.z-z],[b.x-x,y,b.z-z],[b.x+x,y,b.z+z],[a.x+x,y,a.z+z],[(a.x-x)*uvscale,(a.z-z)*uvscale,(b.x-x)*uvscale,(b.z-z)*uvscale,(b.x+x)*uvscale,(b.z+z)*uvscale,(a.x+x)*uvscale,(a.z+z)*uvscale]);}
@@ -42,7 +44,7 @@ function mergeStatic(group){
 
 export function createWorld(scene,map,physics,RAPIER,{mobile=false}={}){
   const m=makeMaterials();const world=new THREE.Group();scene.add(world);const structures=new THREE.Group();world.add(structures);
-  const ground=box(7000,.2,7000,new THREE.MeshStandardMaterial({color:'#99988a',roughness:1}),0,-.15,0);ground.castShadow=false;world.add(ground);
+  const ground=box(7000,.2,7000,m.sidewalk.clone(),0,-.15,0);ground.castShadow=false;world.add(ground);
   physics.createCollider(RAPIER.ColliderDesc.cuboid(3500,.1,3500).setTranslation(0,-.1,0).setFriction(0));
   const roadPlan=planRoadMarkings(map);
   world.add(createRoadMarkings(THREE,roadPlan,m));map.roadMarkingStats=roadPlan.stats;
@@ -53,7 +55,7 @@ export function createWorld(scene,map,physics,RAPIER,{mobile=false}={}){
   layout.clearance.setBuildings(stations.flatMap(station=>station.groundVolumes));
   const shopfrontSystem=createShopfrontSystem(THREE,map,layout,{mobile});world.add(shopfrontSystem.group);
   const featureShops=new THREE.Group(),featureLots=[];world.add(featureShops);
-  const wallBatches=Array.from({length:5},()=>new Batch()),roofBatch=new Batch(),collisionVertices=[],collisionIndices=[];
+  const wallBatches=Array.from({length:m.walls.length},()=>new Batch()),roofBatch=new Batch(),collisionVertices=[],collisionIndices=[];
   const architectural=new THREE.Group();world.add(architectural);
   const trim=new THREE.MeshStandardMaterial({color:'#c8c3b3',roughness:.88});
   const recess=new THREE.MeshStandardMaterial({color:'#3b4849',roughness:.72});
@@ -62,11 +64,10 @@ export function createWorld(scene,map,physics,RAPIER,{mobile=false}={}){
   let count=0;
   for(const b of layout.buildings){
     count++;const base=b.baseHeight,height=b.topHeight;
-    const buildingType=b.tags.building||'';
-    const seed=String(b.id).split('').reduce((v,c)=>v+c.charCodeAt(0),0);
-    const materialIndex=height>32?(buildingType==='apartments'||buildingType==='residential'?2:buildingType==='hotel'?4:1):seed%3===0?3:seed%3===1?0:4;
+    const {seed,materialIndex,tint,roof}=buildingAppearance(b);
+    roofBatch.tint=new THREE.Color(roof);
     const batch=wallBatches[materialIndex],metric=m.walls[materialIndex].userData?.facadeMeters||{width:12,height:13};
-    batch.tint=new THREE.Color(materialIndex===1?'#ffffff':['#eee5d2','#ffffff','#dddcca','#d2daca','#e9d6c8','#cad4d1'][seed%6]);
+    batch.tint=new THREE.Color(m.facadeStyles[materialIndex].category==='office'?'#ffffff':tint);
     for(const polygon of b.polygons){
       const rings=[polygon.outer,...polygon.holes];
       for(const [ringIndex,p]of rings.entries()){
@@ -74,11 +75,11 @@ export function createWorld(scene,map,physics,RAPIER,{mobile=false}={}){
         for(let i=1;i<p.length;i++){
           let a=p[i-1],d=p[i];if((area>0)===(ringIndex===0))[a,d]=[d,a];
           const len=distance(a,d);if(len<.05)continue;
-          const mid={x:(a.x+d.x)/2,z:(a.z+d.z)/2},road=map.nearest(mid,map.main);
+          const mid={x:(a.x+d.x)/2,z:(a.z+d.z)/2},road=map.nearest(mid);
           const nx=-(d.z-a.z)/len,nz=(d.x-a.x)/len,yaw=Math.atan2(nx,nz);
           const towardRoad=nx*(road.x-mid.x)+nz*(road.z-mid.z)>0;
           const near=distance(mid,map.spawn)<(mobile?370:600);
-          const streetFace=base<.1&&towardRoad&&road.distance<33&&ringIndex===0;
+          const streetFace=base<.1&&towardRoad&&road.distance<Math.max(28,road.segment.road.width/2+18)&&ringIndex===0;
           const envelope=BANGKOK_SHOP_ENVELOPE,shopInset=envelope.depth/2;
           const shopCenter={x:mid.x-nx*shopInset,z:mid.z-nz*shopInset,width:envelope.width+2*envelope.seamOverlap+.02,depth:envelope.depth+.02,yaw};
           const feature=streetFace&&Math.abs(nx*road.segment.dir.x+nz*road.segment.dir.z)<.55&&height>=8&&len>=10.2&&len<45&&featureLots.length<22&&featureLots.every(p=>distance(p,mid)>65)&&layout.clearance.isRectangleClear(shopCenter)&&layout.clearance.isRectangleClearOfBuildings(shopCenter,0,b.id);
@@ -104,10 +105,10 @@ export function createWorld(scene,map,physics,RAPIER,{mobile=false}={}){
           const step=3.25;
           for(let y=Math.max(base+step,Math.ceil(facadeHeight/step)*step);y<Math.min(height,35);y+=step){
             architectural.add(box(len,.13,.36,trim,mid.x+nx*.13,y,mid.z+nz*.13,yaw));
-            if(materialIndex===1)continue;
+            if(m.facadeStyles[materialIndex].category==='office')continue;
             for(let at=1.6;at<len-1.5;at+=3.2){
               const px=a.x+(d.x-a.x)*at/len,pz=a.z+(d.z-a.z)*at/len;
-              if(materialIndex===2&&len>5){
+              if(m.facadeStyles[materialIndex].category==='apartment'&&len>5){
                 architectural.add(box(2.5,.12,.65,trim,px+nx*.22,y+.12,pz+nz*.22,yaw));
                 architectural.add(box(2.35,.075,.055,balconyRail,px+nx*.55,y+.94,pz+nz*.55,yaw));
                 for(const along of [-1.05,0,1.05])architectural.add(box(.045,.84,.045,balconyRail,px+nx*.55+nz*along,y+.5,pz+nz*.55-nx*along,yaw));
@@ -132,7 +133,7 @@ export function createWorld(scene,map,physics,RAPIER,{mobile=false}={}){
   }
   mergeStatic(featureShops);mergeStatic(architectural);
   shopfrontSystem.finish();
-  for(let i=0;i<5;i++){const mesh=wallBatches[i].mesh(m.walls[i]);if(mesh){mesh.material.side=THREE.DoubleSide;mesh.castShadow=true;world.add(mesh);}}
+  for(let i=0;i<m.walls.length;i++){const mesh=wallBatches[i].mesh(m.walls[i]);if(mesh){mesh.material.side=THREE.DoubleSide;mesh.castShadow=true;world.add(mesh);}}
   const roofs=roofBatch.mesh(m.roof);if(roofs){roofs.castShadow=true;world.add(roofs);}
   if(collisionVertices.length)physics.createCollider(RAPIER.ColliderDesc.trimesh(new Float32Array(collisionVertices),new Uint32Array(collisionIndices)).setFriction(.2));
 
@@ -174,7 +175,8 @@ export function createWorld(scene,map,physics,RAPIER,{mobile=false}={}){
     lamps.add(box(.085,3.2,.085,chrome,site.x,1.6,site.z));
     lamps.add(box(2.25,.85,.06,sign,site.x,3.05,site.z,Math.atan2(-s.dir.x,-s.dir.z)));
   }
-  const treePositions=[],hedges=[];
+  const districtGround=createDistrictGround(THREE,map,layout,m);world.add(districtGround.group);
+  const treePositions=[...districtGround.trees],hedges=[];
   for(let i=0;i<samples.length;i++){
     const p=samples[i];
     for(const side of [-1,1]){

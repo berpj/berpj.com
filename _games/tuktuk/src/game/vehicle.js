@@ -34,6 +34,7 @@ export class Vehicle {
     this.wheelie = this.visualSteer = this.wheelAngle = 0;
     this.bursting = this.gearBurst = false;
     this.driftTime = this.brakeHold = this.slide = this.turnRate = this.steer = 0;
+    this.drifting=false;this.slipAngle=this.driftIntensity=0;
     this.lastDrive = this.lastReverse = -10;
     this.releaseTime = 1;
     this.previousThrottle = this.autoReverse = false;
@@ -86,7 +87,8 @@ export class Vehicle {
     const reverse = input.gear===-1 || this.autoReverse;
     const throttle = this.autoReverse || this.bursting ? 1 : input.throttle;
     const braking = input.brake && !this.autoReverse;
-    const drift = !locked && (input.drift||this.driftTime>0) && speed>5.5 && Math.abs(input.steer)>.08;
+    const drift = !locked && !braking && !reverse && (input.drift||this.driftTime>0) && speed>4.5 && Math.abs(input.steer)>.08;
+    this.drifting=drift;
     this.slide += (Number(drift)-this.slide)*Math.min(1, dt*7);
 
     if(locked) {
@@ -98,7 +100,15 @@ export class Vehicle {
       const burstSteer=this.bursting?VEHICLE_TUNING.burstSteering:1;
       const targetTurn=-input.steer*steerScale*(speed<0?-1:1)*(drift?1.45:1)*burstSteer;
       this.turnRate+=(targetTurn-this.turnRate)*Math.min(1,dt*9);
-      this.heading+=this.turnRate*dt;
+      const yaw=this.turnRate*dt;
+      this.heading+=yaw;
+      if(drift){
+        // Let the chassis rotate across its travel direction instead of rotating
+        // its velocity with it. Rear grip then catches the slide progressively.
+        const c=Math.cos(yaw),s=Math.sin(yaw),oldSpeed=speed;
+        speed=speed*c-lateral*s;
+        lateral=lateral*c+oldSpeed*s;
+      }
       const acceleration=this.bursting?VEHICLE_TUNING.burstAcceleration:speed<VEHICLE_TUNING.topSpeed?VEHICLE_TUNING.acceleration:0;
       if(!braking) speed+=throttle*(reverse?(speed>-7?-4.5:0):acceleration)*dt;
       if(braking) {
@@ -109,8 +119,10 @@ export class Vehicle {
       if(reverse) speed=Math.max(speed,-7);
       else if(speed>VEHICLE_TUNING.topSpeed&&!this.bursting) speed-=Math.min(speed-VEHICLE_TUNING.topSpeed,dt*4);
       speed=clamp(speed,-7,VEHICLE_TUNING.burstTopSpeed);
-      lateral*=Math.max(0,1-dt*(this.impactTime>0?2.2:drift?2.6:12));
-      if(drift) lateral-=input.steer*Math.abs(speed)*dt*.48*burstSteer;
+      lateral*=Math.exp(-dt*(this.impactTime>0?2.2:drift?1.45:12));
+      if(drift) lateral=clamp(lateral,-Math.abs(speed)*.8,Math.abs(speed)*.8);
+      const planarSpeed=Math.hypot(speed,lateral);
+      if(planarSpeed>VEHICLE_TUNING.burstTopSpeed){const limit=VEHICLE_TUNING.burstTopSpeed/planarSpeed;speed*=limit;lateral*=limit;}
     }
     forward={x:-Math.sin(this.heading),z:-Math.cos(this.heading)};
     right={x:Math.cos(this.heading),z:-Math.sin(this.heading)};
@@ -139,11 +151,15 @@ export class Vehicle {
       if(hit.serious)this.bursting=this.gearBurst=false;
     }
     this.actualSpeed=Math.hypot(v.x,v.z);
+    const lateral=v.x*Math.cos(this.heading)-v.z*Math.sin(this.heading);
+    const forward=-v.x*Math.sin(this.heading)-v.z*Math.cos(this.heading);
+    this.slipAngle=this.actualSpeed>1?Math.atan2(lateral,Math.abs(forward)):0;
+    this.driftIntensity=this.impactTime>0?0:this.slide*clamp((Math.abs(this.slipAngle)-.07)/.42,0,1)*clamp((this.actualSpeed-4)/6,0,1);
     const wobble=Math.sin((.48-this.impactTime)*23)*this.impactTime/.48;
     this.wheelAngle-=this.speed*dt/.252;
     this.pose={x:p.x,y:p.y,z:p.z,heading:this.heading,
       roll:this.visualSteer*Math.min(this.actualSpeed/95,.085)*(1+this.slide*.5)+this.impactRoll*wobble,
-      pitch:this.wheelie+this.impactPitch*wobble,steer:this.visualSteer,wheel:this.wheelAngle,slide:this.slide};
+      pitch:this.wheelie+this.impactPitch*wobble,steer:this.visualSteer,wheel:this.wheelAngle,slide:this.slide,slip:this.slipAngle};
     if(!dt||!this.previousPose){this.previousPose={...this.pose};this.render(1);}
     return impact;
   }
@@ -167,7 +183,7 @@ export class Vehicle {
     this.model.position.x+=dx;this.model.position.y+=pivotOffset.y;this.model.position.z+=dz;
     const refs=this.model.userData;
     for(const wheel of refs.wheels||[]) wheel.rotation.x=blend(a.wheel,b.wheel,t);
-    if(refs.steering) refs.steering.rotation.y=-steer*.42;
+    if(refs.steering) refs.steering.rotation.y=-steer*.42-blend(a.slip,b.slip,t)*blend(a.slide,b.slide,t)*.65;
     for(const passenger of refs.passengers||[]) {
       if(passenger.userData.body) passenger.userData.body.rotation.z=-steer*.10*(1+blend(a.slide,b.slide,t));
     }

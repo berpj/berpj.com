@@ -7,6 +7,11 @@ export const FACADE_STYLES = Object.freeze([
   { name: 'Apartment balconies and condensers', category: 'apartment', meters: [12, 13] },
   { name: 'Older ochre shophouse and shutters', category: 'shophouse', meters: [12, 13] },
   { name: 'Pale concrete residential and hotel', category: 'residential', meters: [12, 13] },
+  { name: 'Mint shophouse with teak shutters', category: 'shophouse', meters: [12, 13] },
+  { name: 'Terracotta tiled shophouse', category: 'shophouse', meters: [12, 13] },
+  { name: 'Rose and cream balcony apartments', category: 'apartment', meters: [12, 13] },
+  { name: 'Blue glass and bronze office', category: 'office', meters: [12, 13] },
+  { name: 'Saffron shop-house with blue shutters', category: 'shophouse', meters: [12, 13] },
 ]);
 
 function seeded(seed) {
@@ -34,13 +39,14 @@ export function canvasTexture(width, height, draw) {
 
 const facadeCache = new Map();
 function facadeSet(style) {
-  const index = ((Math.trunc(style) % 5) + 5) % 5;
-  if (facadeCache.has(index)) return facadeCache.get(index);
+  const styleIndex = ((Math.trunc(style) % FACADE_STYLES.length) + FACADE_STYLES.length) % FACADE_STYLES.length;
+  const index = [0,1,2,3,4,3,0,2,1,3][styleIndex];
+  if (facadeCache.has(styleIndex)) return facadeCache.get(styleIndex);
   const size = 1024;
   const color = canvas(size, size), roughness = canvas(size, size), relief = canvas(size, size);
   const c = color.getContext('2d'), r = roughness.getContext('2d'), b = relief.getContext('2d');
-  const random = seeded(61251 + index * 7411);
-  const bases = ['#c7c3b6', '#586971', '#d1cdbf', '#c4b897', '#d1d1c7'];
+  const random = seeded(61251 + styleIndex * 7411);
+  const bases = ['#c7c3b6','#586971','#d1cdbf','#c4b897','#d1d1c7','#70a793','#bd806b','#c8a2a0','#527b89','#d2b469'];
   const value = n => `rgb(${n},${n},${n})`;
   function rect(x, y, width, height, fill, rough = 226, elevation = 145) {
     c.fillStyle = fill; c.fillRect(x, y, width, height);
@@ -53,7 +59,7 @@ function facadeSet(style) {
       ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x2, y2); ctx.stroke();
     }
   }
-  rect(0, 0, size, size, bases[index]);
+  rect(0, 0, size, size, bases[styleIndex]);
   // Fine plaster pores, faded patches and water marks. Data maps stay linear.
   const grain = canvas(256, 256), gc = grain.getContext('2d');
   const pixels = gc.createImageData(256, 256);
@@ -151,7 +157,7 @@ function facadeSet(style) {
         const left = col * officeBay;
         window(left + 5, top + 5, officeBay - 10, storey - 55, { curtains: false, divider: false, frame: '#929b9b', office: true });
         if (random() < .2) { c.fillStyle = 'rgba(194,203,195,.12)'; c.fillRect(left + 8, top + 8, officeBay - 16, storey - 65); }
-        line(left + 1, top, left + 1, top + storey, 4, '#b7bdb8', 128, 179);
+        line(left + 1, top, left + 1, top + storey, 4, styleIndex===8?'#ac916e':'#b7bdb8', 128, 179);
       }
       line(0, top + storey - 1, size, top + storey - 1, 3, '#9ca5a2', 169, 165);
     }
@@ -162,7 +168,7 @@ function facadeSet(style) {
         const left = col * bay;
         if (index === 0 || index === 3) {
           const tint = index === 0 ? ['#c9c8bb', '#bfc4b6', '#c9c0b2'][col] : ['#c9bda1', '#bcb49d', '#c2b69f'][col];
-          c.globalAlpha = .36; c.fillStyle = tint; c.fillRect(left + 3, top + 3, bay - 6, storey - 6); c.globalAlpha = 1;
+          c.globalAlpha = styleIndex>4?.13:.36; c.fillStyle = tint; c.fillRect(left + 3, top + 3, bay - 6, storey - 6); c.globalAlpha = 1;
           const ww = index === 3 ? 137 : 151, wx = left + (bay - ww) / 2, wy = top + 36;
           if (index === 3 && (floor + col) % 3 === 0) {
             rect(wx - 4, wy - 4, ww + 8, 143, '#b3aa93', 221, 166);
@@ -208,6 +214,22 @@ function facadeSet(style) {
       drips(0, top + storey - 12, size, index === 3 ? 1 : .6);
     }
   }
+  // Painted shutters, tile courses and screens distinguish the new families.
+  if(styleIndex===5||styleIndex===9){
+    for(let floor=0;floor<4;floor++)for(let col=0;col<3;col++){
+      const x=col*bay+bay/2-76,y=floor*storey+36;
+      for(const side of [-1,1]){
+        rect(x+(side<0?-35:152),y,31,135,styleIndex===5?'#735846':'#456c81',215,172);
+        for(let slat=0;slat<16;slat++)line(x+(side<0?-32:155),y+5+slat*8,x+(side<0?-7:180),y+5+slat*8,2,'#344d50',225,180);
+      }
+    }
+  }
+  if(styleIndex===6)for(let floor=0;floor<4;floor++){
+    for(let y=floor*storey+181;y<(floor+1)*storey-12;y+=17){
+      line(0,y,size,y,2,'#ddac8e',230,146);
+      for(let x=(Math.round(y/17)%2)*21;x<size;x+=42)line(x,y,x,y+17,1,'#ddac8e',230,146);
+    }
+  }
   const downsample = image => {
     const reduced = canvas(512, 512); reduced.getContext('2d').drawImage(image, 0, 0, 512, 512); return reduced;
   };
@@ -216,17 +238,17 @@ function facadeSet(style) {
     roughness: fromCanvas(downsample(roughness), { linear: true, repeat: true }),
     bump: fromCanvas(downsample(relief), { linear: true, repeat: true }),
   };
-  set.color.userData = { originalProceduralAsset: true, style: FACADE_STYLES[index].name, tileMeters: [12, 13] };
-  facadeCache.set(index, set); return set;
+  set.color.userData = { originalProceduralAsset: true, style: FACADE_STYLES[styleIndex].name, tileMeters: [12, 13] };
+  facadeCache.set(styleIndex, set); return set;
 }
 
 export function facadeTexture(index = 0) { return facadeSet(index).color; }
 export function facadeMaterial(index = 0) {
-  const style = ((Math.trunc(index) % 5) + 5) % 5, maps = facadeSet(style);
+  const style = ((Math.trunc(index) % FACADE_STYLES.length) + FACADE_STYLES.length) % FACADE_STYLES.length, maps = facadeSet(style);
   const material = new THREE.MeshStandardMaterial({
     map: maps.color, roughnessMap: maps.roughness, bumpMap: maps.bump,
-    bumpScale: style === 1 ? .023 : .055, roughness: 1,
-    metalness: style === 1 ? .045 : .005, color: '#ffffff',
+    bumpScale: FACADE_STYLES[style].category === 'office' ? .023 : .055, roughness: 1,
+    metalness: FACADE_STYLES[style].category === 'office' ? .045 : .005, color: '#ffffff',
   });
   material.name = FACADE_STYLES[style].name;
   material.userData = {
@@ -288,7 +310,7 @@ export function makeMaterials() {
     normalScale: new THREE.Vector2(.13, .13), color: '#dddccf', roughness: 1,
   });
   concrete.name = 'Pale weathered concrete'; concrete.userData = { tileMeters: [1.15, 1.15] };
-  const walls = Array.from({ length: 5 }, (_, index) => facadeMaterial(index));
+  const walls = FACADE_STYLES.map((_, index) => facadeMaterial(index));
   const roof = new THREE.MeshStandardMaterial({
     map: concreteMap, roughnessMap: concreteRoughness,
     normalMap: concreteNormal, normalScale: new THREE.Vector2(.07, .07),
