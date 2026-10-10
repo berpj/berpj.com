@@ -45,7 +45,7 @@ test('recovery uses a road lane and rejects a position off the road',()=>{
 test('each traffic class reaches its faster cruise and brakes before a stopped player',()=>{
   const segment={a:{x:0,z:0},b:{x:0,z:-1000},dir:{x:0,z:-1},len:1000,ia:0,ib:1,road:{width:10,tags:{oneway:'yes',lanes:'1'}}};
   const straight={segments:[segment],main:[segment],spawn:{x:0,z:0},legalGraph:new Map()};
-  for(const [type,minSpeed,maxSpeed] of [['bus',9.5,10],['car',10.2,15.2],['taxi',10.2,15.2],['motorcycle',14.7,19.7]]){
+  for(const [type,minSpeed,maxSpeed] of [['bus',12,12.4],['car',13,19],['taxi',13,19],['motorcycle',18.5,24.6]]){
     const world=new RAPIER.World({x:0,y:0,z:0});
     const traffic=new Traffic(new THREE.Scene(),straight,world,RAPIER,{mobile:true});
     const car=traffic.cars.find(c=>c.type===type);

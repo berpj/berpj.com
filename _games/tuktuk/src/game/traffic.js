@@ -42,7 +42,7 @@ export class Traffic {
       const collider=world.createCollider(RAPIER.ColliderDesc.cuboid(mesh.userData.width/2,height,mesh.userData.length/2)
         .setTranslation(0,height+.1,0).setMass(COLLISION_PROFILES[type].mass).setFriction(.12).setRestitution(type==='motorcycle'?.16:.06),body);
       const car={id:i,mesh,body,collider,type,lane:i%3,progress:0,speed:0,
-        cruise:type==='bus'?9.75:type==='motorcycle'?15+this.random()*4.5:10.5+this.random()*4.5,
+        cruise:1.25*(type==='bus'?9.75:type==='motorcycle'?15+this.random()*4.5:10.5+this.random()*4.5),
         segment:null,reverse:false,distance:Infinity,nearMissTime:0,position:null,dir:null,yaw:0,wheelRoll:0,
         tyres:mesh.getObjectByName('traffic-tyres'),rims:mesh.getObjectByName('traffic-rims')};
       this.cars.push(car);
@@ -140,7 +140,7 @@ export class Traffic {
       const drive=Math.max(0,Math.min(car.cruise+1,desired+Math.max(-2,Math.min(1,alongError))));
       const goal={x:car.dir.x*drive+car.dir.z*correction,z:car.dir.z*drive-car.dir.x*correction};
       let ax=(goal.x-velocity.x)*2.8,az=(goal.z-velocity.z)*2.8;
-      const acceleration=Math.hypot(ax,az),limit=desired<car.speed?14:5.1;
+      const acceleration=Math.hypot(ax,az),limit=desired<car.speed?18:6.4;
       if(acceleration>limit){ax*=limit/acceleration;az*=limit/acceleration;}
       const mass=COLLISION_PROFILES[car.type].mass;
       car.body.applyImpulse({x:ax*mass*dt,y:0,z:az*mass*dt},true);

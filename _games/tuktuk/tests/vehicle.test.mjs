@@ -1,9 +1,37 @@
 import test from 'node:test';import assert from 'node:assert/strict';import RAPIER from '@dimforge/rapier3d-compat';import * as THREE from 'three';
 import {Vehicle} from '../src/game/vehicle.js';await RAPIER.init();
-function setup(){const world=new RAPIER.World({x:0,y:-9.81,z:0});world.createCollider(RAPIER.ColliderDesc.cuboid(1000,.1,1000).setTranslation(0,-.1,0).setFriction(0));const v=new Vehicle(world,RAPIER,new THREE.Group(),{x:0,z:0,heading:0});return {world,v,run(seconds,input){for(let i=0;i<seconds*60;i++){v.step(1/60,{steer:0,gear:1,throttle:0,brake:0,...input});world.step();v.sync(1/60);}}};}
-test('the chassis reaches 75 km/h in three seconds, stays grounded and stops short',()=>{const s=setup();s.run(3,{throttle:1});assert.ok(s.v.actualSpeed*3.6>75&&s.v.actualSpeed*3.6<85);assert.ok(s.v.position.z<-30);assert.ok(s.v.position.y>.5&&s.v.position.y<.65);const before=s.v.position.z;s.run(1,{brake:1});assert.ok(s.v.actualSpeed<.1);assert.ok(Math.abs(s.v.position.z-before)<6);s.world.free();});
-test('a burst improves launch speed and its cadence cannot be spammed',()=>{const s=setup();assert.equal(s.v.burst(),true);assert.equal(s.v.burst(),false);s.run(1,{throttle:1});assert.ok(s.v.actualSpeed>15);assert.equal(s.v.burst(),true);s.world.free();});
-test('normal throttle holds 100 km/h and turbo reaches 140 before returning to cruise',()=>{const s=setup();s.run(20,{throttle:1});assert.ok(s.v.actualSpeed*3.6<=100.5);assert.ok(s.v.actualSpeed*3.6>99);s.v.burst();s.run(.4,{throttle:1});assert.ok(s.v.actualSpeed*3.6>139&&s.v.actualSpeed*3.6<141);s.run(5,{throttle:1});assert.ok(s.v.actualSpeed*3.6<=100.5);s.world.free();});
+function setup(){const world=new RAPIER.World({x:0,y:-9.81,z:0});world.createCollider(RAPIER.ColliderDesc.cuboid(10000,.1,10000).setTranslation(0,-.1,0).setFriction(0));const v=new Vehicle(world,RAPIER,new THREE.Group(),{x:0,z:0,heading:0});return {world,v,run(seconds,input){const events=[];for(let i=0;i<seconds*60;i++){events.push(v.step(1/60,{steer:0,gear:1,throttle:0,brake:0,...input}));world.step();v.sync(1/60);}return events;}};}
+test('the chassis reaches 100 km/h in three seconds, stays grounded and stops short',()=>{const s=setup();s.run(3,{throttle:1});assert.ok(s.v.actualSpeed*3.6>100&&s.v.actualSpeed*3.6<110);assert.ok(s.v.position.z<-30);assert.ok(s.v.position.y>.5&&s.v.position.y<.65);const before=s.v.position.z;s.run(1,{brake:1});assert.ok(s.v.actualSpeed<.1);assert.ok(Math.abs(s.v.position.z-before)<8);s.world.free();});
+test('held burst lasts indefinitely and can restart on the very next tick',()=>{
+  const s=setup();
+  const events=s.run(15,{dash:true});
+  assert.equal(events.filter(e=>e==='dash').length,1,'one launch sound/event per hold');
+  assert.equal(s.v.bursting,true);assert.ok(s.v.actualSpeed*3.6>179);assert.ok(s.v.wheelie>.3);
+  for(let i=0;i<20;i++){
+    s.run(1/60,{});assert.equal(s.v.bursting,false);
+    assert.equal(s.run(1/60,{dash:true})[0],'dash');assert.equal(s.v.bursting,true);
+  }
+  s.world.free();
+});
+test('normal throttle holds 120 km/h and held turbo reaches 180 before returning to cruise',()=>{
+  const s=setup();s.run(20,{throttle:1});assert.ok(s.v.actualSpeed*3.6<=120.5&&s.v.actualSpeed*3.6>119);
+  s.run(.5,{dash:true});assert.ok(s.v.actualSpeed*3.6>179&&s.v.actualSpeed*3.6<181);
+  s.run(5,{throttle:1});assert.equal(s.v.bursting,false);assert.ok(s.v.actualSpeed*3.6<=120.5);s.world.free();
+});
+test('burst limits steering and drift, and releasing restores tight turns',()=>{
+  for(const drift of [false,true]){
+    const normal=setup(),boost=setup();
+    for(const s of [normal,boost])s.run(4,{throttle:1});
+    normal.run(.75,{throttle:1,steer:.8,drift});boost.run(.75,{dash:true,steer:.8,drift});
+    assert.ok(Math.abs(boost.v.heading)<Math.abs(normal.v.heading)*.55);
+    assert.ok(Math.abs(boost.v.heading)>Math.abs(normal.v.heading)*.35);
+    const boostedTurn=Math.abs(boost.v.turnRate);
+    boost.run(.6,{throttle:1,steer:.8,drift});
+    assert.ok(Math.abs(boost.v.turnRate)>boostedTurn*1.8);
+    assert.ok(boost.v.position.y>.5&&boost.v.position.y<.65);
+    normal.world.free();boost.world.free();
+  }
+});
 test('reverse movement is controllable and bounded',()=>{const s=setup();s.run(5,{gear:-1,throttle:1});assert.ok(s.v.position.z>15);assert.ok(s.v.actualSpeed<=7.1);s.run(2,{gear:-1,brake:1});assert.ok(s.v.actualSpeed<.1);s.world.free();});
 test('steering and drift turn the chassis without destabilizing roll',()=>{const s=setup();s.run(2,{throttle:1});const before=s.v.heading;s.run(1,{throttle:1,steer:.5,drift:true});assert.ok(s.v.heading<before-.2);assert.ok(s.v.slide>.7);assert.ok(s.v.position.y>.5);s.world.free();});
 
@@ -23,14 +51,14 @@ test('reset clears old recovery position, slide and reverse state',()=>{
 test('full-speed stops are short and a brake cancels turbo before reverse',()=>{
   for(const boost of [false,true]){
     const s=setup();s.run(7,{throttle:1});
-    if(boost){s.v.burst();s.run(.4,{throttle:1});}
+    if(boost)s.run(.5,{dash:true});
     const start=s.v.position.z,speed=s.v.actualSpeed;
-    assert.ok(speed>(boost?38:27));
+    assert.ok(speed>(boost?49:32));
     let elapsed=0;
-    while(s.v.actualSpeed>.1&&elapsed<2){s.run(1/60,{brake:1});elapsed+=1/60;}
+    while(s.v.actualSpeed>.1&&elapsed<2){s.run(1/60,{brake:1,dash:boost});elapsed+=1/60;}
     const distance=start-s.v.position.z;
-    assert.ok(distance<(boost?19.5:10),`stopping distance ${distance.toFixed(2)} m at ${(speed*3.6).toFixed(1)} km/h`);
-    assert.ok(elapsed<(boost?1.35:1));assert.equal(s.v.burstTime,0);assert.equal(s.v.autoReverse,false);
+    assert.ok(distance<(boost?22:10),`stopping distance ${distance.toFixed(2)} m at ${(speed*3.6).toFixed(1)} km/h`);
+    assert.ok(elapsed<(boost?1.1:.8));assert.equal(s.v.bursting,false);assert.equal(s.v.autoReverse,false);
     s.run(.35,{brake:1});assert.ok(s.v.actualSpeed<.1);s.world.free();
   }
 });
@@ -48,7 +76,7 @@ test('rendering interpolates between fixed ticks and reset never sweeps across t
 
 test('turbo lifts the front around the rear axle and lands smoothly on braking',()=>{
   const s=setup();s.v.reset({x:0,z:0,heading:1.2});s.run(2,{throttle:1});
-  s.v.burst();s.run(.35,{throttle:1});s.v.render(1);s.v.model.updateMatrixWorld(true);
+  s.run(.35,{dash:true});s.v.render(1);s.v.model.updateMatrixWorld(true);
   assert.ok(s.v.wheelie>.24&&s.v.wheelie<.4);
   const rear=new THREE.Vector3(0,.252,.79).applyMatrix4(s.v.model.matrixWorld);
   const front=new THREE.Vector3(0,.252,-1.1).applyMatrix4(s.v.model.matrixWorld);
@@ -59,8 +87,14 @@ test('turbo lifts the front around the rear axle and lands smoothly on braking',
 });
 
 test('burst input launches forward but is rejected when braking, reversing or boarding',()=>{
-  const s=setup();s.run(1/60,{dash:true});s.run(.3,{});assert.ok(s.v.actualSpeed>7);
-  s.v.reset({x:0,z:0,heading:0});s.run(1/60,{dash:true,brake:1});assert.equal(s.v.burstTime,0);
-  s.run(1/60,{dash:true,gear:-1});assert.equal(s.v.burstTime,0);
-  s.v.step(1/60,{dash:true,throttle:1,steer:0,gear:1},true);assert.equal(s.v.burstTime,0);s.world.free();
+  const s=setup();s.run(.3,{dash:true});assert.ok(s.v.actualSpeed>7);
+  s.v.reset({x:0,z:0,heading:0});s.run(1/60,{dash:true,brake:1});assert.equal(s.v.bursting,false);
+  s.run(1/60,{dash:true,gear:-1});assert.equal(s.v.bursting,false);
+  s.v.step(1/60,{dash:true,throttle:1,steer:0,gear:1},true);assert.equal(s.v.bursting,false);s.world.free();
+});
+
+test('gear-combo burst has no time limit but releases with the accelerator',()=>{
+  const s=setup();s.run(1,{throttle:1});s.run(1/60,{reverseEdge:true,throttle:1});s.run(1/60,{driveEdge:true,throttle:1});
+  s.run(3,{throttle:1});assert.equal(s.v.bursting,true);assert.ok(s.v.actualSpeed*3.6>179);
+  s.run(1/60,{});assert.equal(s.v.bursting,false);s.world.free();
 });

@@ -31,11 +31,11 @@ export class BurstFX {
       const core=new THREE.Mesh(geometry,material);core.position.copy(jet.position);core.scale.set(.45,.45,.64);core.renderOrder=4;this.group.add(core);this.jets.push(core);
     }
     this.glow=new THREE.PointLight('#ff742d',0,3,2);this.glow.position.set(0,.65,1.8);this.group.add(this.glow);
-    this.update(0,{burstTime:0,speed:0});
+    this.update(0,{bursting:false,speed:0});
   }
   update(dt,vehicle) {
     this.time+=dt;
-    const on=vehicle.burstTime>0&&vehicle.speed>0;
+    const on=vehicle.bursting&&vehicle.speed>0;
     this.strength+=(Number(on)-this.strength)*(1-Math.exp(-dt*(on?38:22)));
     this.material.uniforms.time.value=this.time;this.material.uniforms.power.value=this.strength;
     this.glow.intensity=this.strength*3.5;
@@ -47,5 +47,5 @@ export class BurstFX {
       jet.scale.set(core?.46:1,core?.46:1,length*(core?.65:1));
     }
   }
-  reset(){this.strength=0;this.update(0,{burstTime:0,speed:0});}
+  reset(){this.strength=0;this.update(0,{bursting:false,speed:0});}
 }

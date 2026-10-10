@@ -27,18 +27,18 @@ npm run preview
 | Accelerator | W or up arrow | Right trigger |
 | Brake, then reverse while held | S or down arrow | Left trigger |
 | Reverse / drive | Q / E | South / east face buttons |
-| Acceleration burst | Shift | West face button |
+| Unlimited burst | Hold Shift | Hold west face button |
 | Drift | Space while steering | Right shoulder |
 | Horn | H | North face button |
 | Look back | C | Keyboard only |
 | Recover | R | Pause and restart if needed |
 | Pause | Escape | Menu/start button |
 
-Touch controls use a steering pad, Burst, Drift and Brake. Auto-throttle is enabled on touch devices by default and can be changed in Settings. Hold brake after stopping to reverse continuously, then release it to drive forward again. The same brake-to-reverse behavior works on keyboard and gamepad. The ↻ button or R returns the tuk-tuk to a checked position on the road.
+Touch controls use a steering pad, Burst, Drift and Brake. Hold Burst for unlimited turbo, then release for tighter steering. Burst has no recharge or cooldown on any input device. Auto-throttle is enabled on touch devices by default and can be changed in Settings. Hold brake after stopping to reverse continuously, then release it to drive forward again. The same brake-to-reverse behavior works on keyboard and gamepad. The ↻ button or R returns the tuk-tuk to a checked position on the road.
 
 Stop inside a yellow passenger ring to accept a fare. Follow the street route shown by the arrow and minimap. Turning route guidance off restores the direct destination arrow. Guidance also leads to the next passenger. Stop inside the green destination ring to bank the fare. Successful deliveries extend an Arcade shift. Fixed 3, 5 and 10-minute modes and Free Ride are available. Personal bests and settings stay in local browser storage.
 
-Vehicle, wheel and traffic poses interpolate between fixed physics ticks; the chase camera follows the interpolated pose. The tuk-tuk reaches about 100 km/h normally and 140 km/h with a burst, with quicker acceleration. Braking at 100 km/h stops in about 8.9 m / 0.67 s on level road before hold-to-reverse engages. Traffic cruises at about 35 km/h for buses, 38 to 54 km/h for cars and taxis, and 54 to 70 km/h for scooters, slowing for vehicles ahead. Bursts emit procedural exhaust flames and smoothly pivot the tuk-tuk around its rear axle. Physics remains stable and planar during the visual wheelie.
+Vehicle, wheel and traffic poses interpolate between fixed physics ticks; the chase camera follows the interpolated pose. The tuk-tuk reaches about 120 km/h normally and 180 km/h while holding burst, with quicker acceleration. Burst reduces steering and drift response to 48% so releasing it helps with tight corners. Strong brakes keep full-speed stops under 10 m normally and 22 m from burst speed on level road before hold-to-reverse engages. Traffic cruises at about 44 km/h for buses, 47 to 68 km/h for cars and taxis, and 68 to 88 km/h for scooters, slowing for vehicles ahead. Bursts emit procedural exhaust flames and smoothly pivot the tuk-tuk around its rear axle. Physics remains stable and planar during the visual wheelie.
 
 ## Deployment
 

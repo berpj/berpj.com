@@ -6,8 +6,8 @@ const tilt = new Euler(0,0,0,'YXZ');
 const pivotOffset = new Vector3();
 const blend = (a,b,t)=>a+(b-a)*t;
 export const VEHICLE_TUNING = Object.freeze({
-  topSpeed: 27.8, burstTopSpeed: 38.9, acceleration: 7.5, burstAcceleration: 40,
-  brake: 42, hardBrake: 50,
+  topSpeed: 120/3.6, burstTopSpeed: 180/3.6, acceleration: 10, burstAcceleration: 50,
+  brake: 60, hardBrake: 72, burstSteering: .48,
 });
 
 export class Vehicle {
@@ -32,8 +32,9 @@ export class Vehicle {
     this.body.setAngvel({x:0, y:0, z:0}, true);
     this.speed = this.actualSpeed = this.expectedSpeed = 0;
     this.wheelie = this.visualSteer = this.wheelAngle = 0;
-    this.burstTime = this.driftTime = this.brakeHold = this.slide = this.turnRate = this.steer = 0;
-    this.lastBurst = this.lastDrive = this.lastReverse = -10;
+    this.bursting = this.gearBurst = false;
+    this.driftTime = this.brakeHold = this.slide = this.turnRate = this.steer = 0;
+    this.lastDrive = this.lastReverse = -10;
     this.releaseTime = 1;
     this.previousThrottle = this.autoReverse = false;
     this.impactTime=0;this.impactRoll=0;this.impactPitch=0;this.contactTimes=new Map();this.lastImpact=null;
@@ -41,17 +42,10 @@ export class Vehicle {
     this.sync(0);
   }
 
-  burst() {
-    if(this.time-this.lastBurst < .45) return false;
-    this.lastBurst = this.time;
-    this.burstTime = .65;
-    return true;
-  }
-
   step(dt, input, locked=false) {
     this.previousPose = {...this.pose};
     this.time += dt;
-    this.burstTime = Math.max(0, this.burstTime-dt);
+    const wasBursting = this.bursting;
     this.driftTime = Math.max(0, this.driftTime-dt);
     this.impactTime=Math.max(0,this.impactTime-dt);
     let event = null;
@@ -67,13 +61,16 @@ export class Vehicle {
       this.lastDrive = this.time;
       if(!locked && this.time-this.lastReverse<.22 && Math.abs(speed)>5.5) {
         if(Math.abs(input.steer)>.35) {this.driftTime=1.8; event='drift';}
-        else if(this.burst()) event='dash';
+        else this.gearBurst=true;
       }
     }
     const canBurst=!locked&&!input.brake&&input.gear!==-1&&speed>-.4;
-    if(input.dash && canBurst && this.burst()) event='dash';
-    if(rising && this.releaseTime>.06 && this.time-this.lastDrive<.18 && canBurst && this.burst()) event='dash';
-    if(locked||input.brake||input.gear===-1)this.burstTime=0;
+    if(rising && this.releaseTime>.06 && this.time-this.lastDrive<.18 && canBurst)this.gearBurst=true;
+    // Shift, touch and gamepad sustain turbo for as long as they are held.
+    // Gear-combo bursts last while accelerating; neither path has a cooldown.
+    if(!canBurst||!input.throttle)this.gearBurst=false;
+    this.bursting=canBurst&&!!(input.dash||this.gearBurst);
+    if(this.bursting&&!wasBursting)event='dash';
     if(input.throttle) this.releaseTime=0;
     this.previousThrottle=!!input.throttle;
 
@@ -87,7 +84,7 @@ export class Vehicle {
       if(this.brakeHold>=.65) this.autoReverse=true;
     } else if(!this.autoReverse) this.brakeHold=0;
     const reverse = input.gear===-1 || this.autoReverse;
-    const throttle = this.autoReverse || this.burstTime>0 ? 1 : input.throttle;
+    const throttle = this.autoReverse || this.bursting ? 1 : input.throttle;
     const braking = input.brake && !this.autoReverse;
     const drift = !locked && (input.drift||this.driftTime>0) && speed>5.5 && Math.abs(input.steer)>.08;
     this.slide += (Number(drift)-this.slide)*Math.min(1, dt*7);
@@ -98,10 +95,11 @@ export class Vehicle {
       this.turnRate=0;
     } else {
       const steerScale=clamp(Math.abs(speed)/4,0,1)*(1.55-Math.min(Math.abs(speed)/34,.78));
-      const targetTurn=-input.steer*steerScale*(speed<0?-1:1)*(drift?1.45:1);
+      const burstSteer=this.bursting?VEHICLE_TUNING.burstSteering:1;
+      const targetTurn=-input.steer*steerScale*(speed<0?-1:1)*(drift?1.45:1)*burstSteer;
       this.turnRate+=(targetTurn-this.turnRate)*Math.min(1,dt*9);
       this.heading+=this.turnRate*dt;
-      const acceleration=this.burstTime>0?VEHICLE_TUNING.burstAcceleration:speed<VEHICLE_TUNING.topSpeed?VEHICLE_TUNING.acceleration:0;
+      const acceleration=this.bursting?VEHICLE_TUNING.burstAcceleration:speed<VEHICLE_TUNING.topSpeed?VEHICLE_TUNING.acceleration:0;
       if(!braking) speed+=throttle*(reverse?(speed>-7?-4.5:0):acceleration)*dt;
       if(braking) {
         const brake=(this.time-this.lastReverse<.15||this.slide>.3?VEHICLE_TUNING.hardBrake:VEHICLE_TUNING.brake)*dt;
@@ -109,10 +107,10 @@ export class Vehicle {
       }
       if(!throttle&&!braking) speed*=Math.max(0,1-dt*.3);
       if(reverse) speed=Math.max(speed,-7);
-      else if(speed>VEHICLE_TUNING.topSpeed&&this.burstTime<=0) speed-=Math.min(speed-VEHICLE_TUNING.topSpeed,dt*4);
+      else if(speed>VEHICLE_TUNING.topSpeed&&!this.bursting) speed-=Math.min(speed-VEHICLE_TUNING.topSpeed,dt*4);
       speed=clamp(speed,-7,VEHICLE_TUNING.burstTopSpeed);
       lateral*=Math.max(0,1-dt*(this.impactTime>0?2.2:drift?2.6:12));
-      if(drift) lateral-=input.steer*Math.abs(speed)*dt*.48;
+      if(drift) lateral-=input.steer*Math.abs(speed)*dt*.48*burstSteer;
     }
     forward={x:-Math.sin(this.heading),z:-Math.cos(this.heading)};
     right={x:Math.cos(this.heading),z:-Math.sin(this.heading)};
@@ -123,8 +121,8 @@ export class Vehicle {
     this.speed=speed;
     this.steer=input.steer;
     this.visualSteer+=(input.steer-this.visualSteer)*(1-Math.exp(-16*dt));
-    const targetWheelie=this.burstTime>0&&!reverse&&!locked&&speed>2
-      ? .36*Math.min(1,this.burstTime/.18)*clamp(speed/9,0,1):0;
+    const targetWheelie=this.bursting&&!reverse&&!locked&&speed>2
+      ? .36*clamp(speed/9,0,1):0;
     this.wheelie+=(targetWheelie-this.wheelie)*(1-Math.exp(-(targetWheelie>this.wheelie?10:13)*dt));
     return event;
   }
@@ -138,7 +136,7 @@ export class Vehicle {
       const side=hit.normal.x*Math.cos(this.heading)-hit.normal.z*Math.sin(this.heading);
       this.impactRoll=clamp(side*hit.deltaV*.018,-.16,.16);
       this.impactPitch=clamp(hit.deltaV*.013,0,.1);
-      if(hit.serious)this.burstTime=0;
+      if(hit.serious)this.bursting=this.gearBurst=false;
     }
     this.actualSpeed=Math.hypot(v.x,v.z);
     const wobble=Math.sin((.48-this.impactTime)*23)*this.impactTime/.48;
