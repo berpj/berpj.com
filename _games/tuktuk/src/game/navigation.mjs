@@ -7,3 +7,8 @@ export function directArrowRotation(position,target,heading,previous=0){
   const delta=bearing-previous*Math.PI/180;
   return previous+Math.atan2(Math.sin(delta),Math.cos(delta))*180/Math.PI;
 }
+
+// A completed fare keeps its data during unloading, but no longer needs guidance.
+export function fareNavigationTarget(session){
+  return session.phase==='boarding'||session.phase==='carrying'?session.fare?.to??null:null;
+}

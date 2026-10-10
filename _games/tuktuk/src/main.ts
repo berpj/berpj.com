@@ -12,7 +12,7 @@ import {prepareMap} from './world/map.mjs';
 import {createWorld,createPerson} from './world/scene.js';
 import {Vehicle} from './game/vehicle.js';
 import {roadRecoveryPose} from './game/recovery.js';
-import {directArrowRotation} from './game/navigation.mjs';
+import {directArrowRotation,fareNavigationTarget} from './game/navigation.mjs';
 import {Traffic} from './game/traffic.js';
 import {Controls} from './game/input.js';
 import {GameAudio} from './game/audio.js';
@@ -152,26 +152,26 @@ function updateCamera(dt:number,instant=false){if(!vehicle)return;const p=vehicl
   sun.target.position.set(p.x,0,p.z);sun.position.copy(sun.target.position).add(sunOffset);sun.target.updateMatrixWorld();
 }
 function updateHUD(){
-  const destination=session.fare?.to||selectedPickup?.anchor;navigationAge+=.1;
+  const destination=fareNavigationTarget(session);navigationAge+=.1;
   if(destination&&(navigationAge>=.6||destination!==navigationTarget)){navigationRoute=map.route(vehicle.position,destination);navigationTarget=destination;navigationAge=0;}
   if(!destination){navigationRoute=null;navigationTarget=null;}
   if(destination){arrowRotation=directArrowRotation(vehicle.position,destination,vehicle.heading,arrowRotation);document.querySelector<SVGElement>('#nav-arrow svg')!.style.transform=`rotate(${arrowRotation}deg)`;}
 
   $('shift-time').textContent=clock(session.time);document.querySelector('.shift-clock')!.classList.toggle('low',session.time<15);$('earnings').textContent=money(session.earnings);$('deliveries').textContent=String(session.deliveries);renderScoreTarget(root,session.earnings,runBest,session.mode);$('speed').textContent=String(Math.round(vehicle.actualSpeed*3.6));$('gear').innerHTML=`${vehicle.speed<-.1?'R':'D'}${vehicle.bursting?' <span>· BURST!</span>':vehicle.driftIntensity>.12?' <span>· SOI SLIDE</span>':''}`;
   show('drift-indicator',vehicle.driftIntensity>.12&&started&&!paused&&countdown<=0&&session.phase!=='ended');
-  const f=session.fare;show('fare-clock',!!f);show('nav-arrow',!!f||!!selectedPickup);show('combo',session.combo>1);$('combo-count').textContent=String(session.combo);$('combo-multiplier').textContent=`×${Math.min(5,1+Math.floor(session.combo/3))}`;
+  const f=session.fare;show('fare-clock',!!f);show('nav-arrow',!!destination);show('combo',session.combo>1);$('combo-count').textContent=String(session.combo);$('combo-multiplier').textContent=`×${Math.min(5,1+Math.floor(session.combo/3))}`;
   if(f){const d=distance(vehicle.position,f.to);$('job-label').textContent=session.phase==='unloading'?'FARE COMPLETE':'DROP OFF';$('job-name').textContent=f.to.name;$('job-distance').textContent=`${Math.round(d)} m · ${money(f.base+f.tips)}`;$('fare-clock').textContent=clock(f.remaining);document.querySelector<HTMLElement>('#fare-progress>span')!.style.width=`${f.remaining/f.deadline*100}%`;
     $('nav-distance').textContent=`${Math.round(d)} m`;
     $('context-hint').textContent=session.phase==='boarding'?'All aboard. Time to move!':d<18?'Brake inside the green ring to drop off.':'Hold burst on the straights. Release for tighter turns.';
-  }else{$('job-label').textContent='FIND A PASSENGER';$('job-name').textContent=selectedPickup?.to.name||'Your next fare awaits';$('job-distance').textContent=selectedPickup?`${Math.round(distance(vehicle.position,selectedPickup.anchor))} m · ${money(Math.round(40+.12*selectedPickup.route.length))} base fare`:'Stop in a yellow ring';document.querySelector<HTMLElement>('#fare-progress>span')!.style.width='0';$('context-hint').textContent='Stop in the yellow ring to pick up a passenger.';}
-  if(!f&&selectedPickup)$('nav-distance').textContent=`PICKUP · ${Math.round(distance(vehicle.position,selectedPickup.anchor))} m`;
+  }else{$('job-label').textContent='FIND A PASSENGER';$('job-name').textContent='Choose any customer';$('job-distance').textContent='Customers are the yellow dots on your map';document.querySelector<HTMLElement>('#fare-progress>span')!.style.width='0';$('context-hint').textContent='Stop in any yellow ring to pick up a passenger.';$('nav-distance').textContent='';}
   drawMinimap();
 }
 function drawMinimap(){const c=$<HTMLCanvasElement>('minimap').getContext('2d')!;const w=280,h=280;c.fillStyle='#182e27';c.fillRect(0,0,w,h);const p=vehicle.position,scale=.55;const xy=(a:any)=>({x:(a.x-p.x)*scale+w/2,y:(a.z-p.z)*scale+h/2});
   c.strokeStyle='#607063';c.lineCap='round';for(const s of map.segments){if(distance(s.a,p)>420&&distance(s.b,p)>420)continue;const a=xy(s.a),b=xy(s.b);c.lineWidth=Math.max(1,s.road.width*scale*.45);c.beginPath();c.moveTo(a.x,a.y);c.lineTo(b.x,b.y);c.stroke();}
   if(navigationRoute&&routeLine){c.strokeStyle='#edd14d';c.lineWidth=4;c.beginPath();navigationRoute.points.forEach((a:any,i:number)=>{const point=xy(a);if(i)c.lineTo(point.x,point.y);else c.moveTo(point.x,point.y);});c.stroke();}
-  if(!session.fare){for(const pickup of pickups){if(pickup.cooldown>0)continue;const a=xy(pickup.anchor);c.fillStyle='#eaca4c';c.beginPath();c.arc(a.x,a.y,3,0,Math.PI*2);c.fill();}}
-  if(session.fare){const a=xy(session.fare.to);c.fillStyle='#a2e27d';c.beginPath();c.arc(a.x,a.y,5,0,Math.PI*2);c.fill();}
+  const target=fareNavigationTarget(session);
+  if(!target){for(const pickup of pickups){if(pickup.cooldown>0)continue;const a=xy(pickup.anchor);c.fillStyle='#eaca4c';c.beginPath();c.arc(a.x,a.y,3,0,Math.PI*2);c.fill();}}
+  if(target){const a=xy(target);c.fillStyle='#a2e27d';c.beginPath();c.arc(a.x,a.y,5,0,Math.PI*2);c.fill();}
   c.save();c.translate(w/2,h/2);c.rotate(-vehicle.heading);c.fillStyle='#fbf3d3';c.strokeStyle='#17382c';c.lineWidth=2;c.beginPath();c.moveTo(0,-10);c.lineTo(6,7);c.lineTo(0,4);c.lineTo(-6,7);c.closePath();c.fill();c.stroke();c.restore();}
 function frame(now:number){requestAnimationFrame(frame);controls.pollPause();const raw=(now-previous)/1000,dt=Math.min(.08,raw);previous=now;fpsFrames++;fpsElapsed+=raw;if(fpsElapsed>=1){observedFPS=Math.round(fpsFrames/fpsElapsed);fpsFrames=0;fpsElapsed=0;}
   if(started&&!paused&&session.phase!=='ended'){
