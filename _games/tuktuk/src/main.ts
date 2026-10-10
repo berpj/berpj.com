@@ -12,6 +12,7 @@ import {prepareMap} from './world/map.mjs';
 import {createWorld,createPerson} from './world/scene.js';
 import {Vehicle} from './game/vehicle.js';
 import {roadRecoveryPose} from './game/recovery.js';
+import {directArrowRotation} from './game/navigation.mjs';
 import {Traffic} from './game/traffic.js';
 import {Controls} from './game/input.js';
 import {GameAudio} from './game/audio.js';
@@ -33,7 +34,7 @@ let route:any=null,pickups:any[]=[],destinationMarker:any,selectedPickup:any=nul
 let previous=performance.now(),accumulator=0,fpsFrames=0,fpsElapsed=0,observedFPS=60;const clockStep=1/60;
 const cameraTarget=new THREE.Vector3(),cameraDesired=new THREE.Vector3(),sunOffset=SKY_SUN_DIRECTION.clone().multiplyScalar(194);
 const cameraLastPlayer=new THREE.Vector3(),cameraLook=new THREE.Vector3(),cameraForward=new THREE.Vector3(),cameraRight=new THREE.Vector3();
-let cameraHeading=0;
+let cameraHeading=0,arrowRotation=0;
 const settingsKey='bangkok-tuk-tuk:settings:v1';
 let scorebook=normalizeScorebook(loadStored(SCOREBOOK_KEY,{}),loadStored(LEGACY_RECORD_KEY,{}));
 let runBest=0,runAssisted=false,runId='',runSaved=false,scoresPersistent=true;
@@ -100,7 +101,7 @@ function createPickups(){
 }
 function createDestinationMarker(){destinationMarker=ring('#8deb77',7);const cone=new THREE.Mesh(new THREE.ConeGeometry(1.4,2,4),new THREE.MeshBasicMaterial({color:'#e5d449'}));cone.rotation.z=Math.PI;cone.position.y=5;destinationMarker.add(cone);destinationMarker.visible=false;scene.add(destinationMarker);}
 function resetPassengers(){for(const p of tuk.userData.passengers||[])p.visible=!!session.fare;}
-function startGame(selectedMode:string){if(!ready)return;closeDialog();audio.start();session.reset(selectedMode);mode=selectedMode;$<HTMLSelectElement>('mode-select').value=mode;runAssisted=controls.autoThrottle;runBest=bestScore(scorebook,mode,runAssisted);runId=crypto.randomUUID();runSaved=false;started=true;paused=false;countdown=3;stopping=0;simTime=0;lastCrash=-10;driftAge=0;driftDistance=0;route=null;navigationRoute=null;navigationTarget=null;navigationAge=1;selectedPickup=null;controls.clear();controls.gear=1;controls.enabled=true;vehicle.body.setEnabled(true);vehicle.reset(map.spawn);collisionFX?.reset();burstFX?.reset();driftFX?.reset();traffic.reset(map.spawn);createPickups();destinationMarker.visible=false;resetPassengers();accumulator=0;updateCamera(0,true);
+function startGame(selectedMode:string){if(!ready)return;closeDialog();audio.start();session.reset(selectedMode);mode=selectedMode;$<HTMLSelectElement>('mode-select').value=mode;runAssisted=controls.autoThrottle;runBest=bestScore(scorebook,mode,runAssisted);runId=crypto.randomUUID();runSaved=false;arrowRotation=0;started=true;paused=false;countdown=3;stopping=0;simTime=0;lastCrash=-10;driftAge=0;driftDistance=0;route=null;navigationRoute=null;navigationTarget=null;navigationAge=1;selectedPickup=null;controls.clear();controls.gear=1;controls.enabled=true;vehicle.body.setEnabled(true);vehicle.reset(map.spawn);collisionFX?.reset();burstFX?.reset();driftFX?.reset();traffic.reset(map.spawn);createPickups();destinationMarker.visible=false;resetPassengers();accumulator=0;updateCamera(0,true);
   root.classList.add('playing');show('menu',false);show('hud');show('countdown');$('countdown').textContent='3';$('context-hint').textContent='Stop in the yellow ring to pick up a passenger.';updateHUD();}
 function returnToMenu(){audio.update(0,0,false);started=false;paused=false;countdown=0;controls.enabled=false;controls.clear();session.reset();destinationMarker.visible=false;vehicle.reset(map.spawn);vehicle.body.setEnabled(false);driftFX?.reset();resetPassengers();show('menu');show('hud',false);show('countdown',false);closeDialog();root.classList.remove('playing');updateRecord();}
 function togglePause(force=false){if(!started||session.phase==='ended'||countdown>0&&!force)return;if(force&&paused)return;paused=force||!paused;controls.clear();if(paused){audio.update(0,0,false);openDialog('pause-dialog');}else{audio.start();closeDialog();countdown=1;show('countdown');}previous=performance.now();accumulator=0;}
@@ -154,17 +155,16 @@ function updateHUD(){
   const destination=session.fare?.to||selectedPickup?.anchor;navigationAge+=.1;
   if(destination&&(navigationAge>=.6||destination!==navigationTarget)){navigationRoute=map.route(vehicle.position,destination);navigationTarget=destination;navigationAge=0;}
   if(!destination){navigationRoute=null;navigationTarget=null;}
-  let arrowTarget=destination;
-  if(routeLine&&navigationRoute?.points.length){let remaining=20;const points=navigationRoute.points;arrowTarget=points[points.length-1];for(let i=1;i<points.length;i++){const a=points[i-1],b=points[i],len=distance(a,b);if(len>=remaining){arrowTarget={x:a.x+(b.x-a.x)*remaining/len,z:a.z+(b.z-a.z)*remaining/len};break;}remaining-=len;}}
+  if(destination){arrowRotation=directArrowRotation(vehicle.position,destination,vehicle.heading,arrowRotation);document.querySelector<SVGElement>('#nav-arrow svg')!.style.transform=`rotate(${arrowRotation}deg)`;}
 
   $('shift-time').textContent=clock(session.time);document.querySelector('.shift-clock')!.classList.toggle('low',session.time<15);$('earnings').textContent=money(session.earnings);$('deliveries').textContent=String(session.deliveries);renderScoreTarget(root,session.earnings,runBest,session.mode);$('speed').textContent=String(Math.round(vehicle.actualSpeed*3.6));$('gear').innerHTML=`${vehicle.speed<-.1?'R':'D'}${vehicle.bursting?' <span>· BURST!</span>':vehicle.driftIntensity>.12?' <span>· SOI SLIDE</span>':''}`;
   show('drift-indicator',vehicle.driftIntensity>.12&&started&&!paused&&countdown<=0&&session.phase!=='ended');
   const f=session.fare;show('fare-clock',!!f);show('nav-arrow',!!f||!!selectedPickup);show('combo',session.combo>1);$('combo-count').textContent=String(session.combo);$('combo-multiplier').textContent=`×${Math.min(5,1+Math.floor(session.combo/3))}`;
   if(f){const d=distance(vehicle.position,f.to);$('job-label').textContent=session.phase==='unloading'?'FARE COMPLETE':'DROP OFF';$('job-name').textContent=f.to.name;$('job-distance').textContent=`${Math.round(d)} m · ${money(f.base+f.tips)}`;$('fare-clock').textContent=clock(f.remaining);document.querySelector<HTMLElement>('#fare-progress>span')!.style.width=`${f.remaining/f.deadline*100}%`;
-    const targetAngle=Math.atan2(-(arrowTarget.x-vehicle.position.x),-(arrowTarget.z-vehicle.position.z));const turn=targetAngle-vehicle.heading;document.querySelector<SVGElement>('#nav-arrow svg')!.style.transform=`rotate(${-turn*180/Math.PI}deg)`;$('nav-distance').textContent=`${Math.round(d)} m`;
+    $('nav-distance').textContent=`${Math.round(d)} m`;
     $('context-hint').textContent=session.phase==='boarding'?'All aboard. Time to move!':d<18?'Brake inside the green ring to drop off.':'Hold burst on the straights. Release for tighter turns.';
   }else{$('job-label').textContent='FIND A PASSENGER';$('job-name').textContent=selectedPickup?.to.name||'Your next fare awaits';$('job-distance').textContent=selectedPickup?`${Math.round(distance(vehicle.position,selectedPickup.anchor))} m · ${money(Math.round(40+.12*selectedPickup.route.length))} base fare`:'Stop in a yellow ring';document.querySelector<HTMLElement>('#fare-progress>span')!.style.width='0';$('context-hint').textContent='Stop in the yellow ring to pick up a passenger.';}
-  if(!f&&selectedPickup){const p=vehicle.position,target=arrowTarget;const angle=Math.atan2(-(target.x-p.x),-(target.z-p.z))-vehicle.heading;document.querySelector<SVGElement>('#nav-arrow svg')!.style.transform=`rotate(${-angle*180/Math.PI}deg)`;$('nav-distance').textContent=`PICKUP · ${Math.round(distance(p,selectedPickup.anchor))} m`;}
+  if(!f&&selectedPickup)$('nav-distance').textContent=`PICKUP · ${Math.round(distance(vehicle.position,selectedPickup.anchor))} m`;
   drawMinimap();
 }
 function drawMinimap(){const c=$<HTMLCanvasElement>('minimap').getContext('2d')!;const w=280,h=280;c.fillStyle='#182e27';c.fillRect(0,0,w,h);const p=vehicle.position,scale=.55;const xy=(a:any)=>({x:(a.x-p.x)*scale+w/2,y:(a.z-p.z)*scale+h/2});
