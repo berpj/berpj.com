@@ -23,7 +23,7 @@
       text-decoration: none;
       color: inherit;
     }
-    #emoji, #emoji2, #emoji3 {
+    #emoji, #emoji2, #emoji3, #emoji4 {
       position: absolute;
       font-size: 65px;
       line-height: 38px;
@@ -35,6 +35,7 @@
   <a href="/bangkok-past-and-present" id="emoji">📷</a>
   <a href="/cat" id="emoji2">🐱</a>
   <a href="/tuktuk/" id="emoji3" aria-label="Play Bangkok Tuk Tuk" title="Bangkok Tuk Tuk">🛺</a>
+  <a href="/longtail/" id="emoji4" aria-label="Play Longtail After Dark" title="Longtail After Dark">🚤</a>
 
   <script>
     const emojis = [
@@ -60,6 +61,14 @@
         y: 320,
         dx: 2.3,
         dy: -1.7,
+        radius: 30,
+      },
+      {
+        el: document.getElementById('emoji4'),
+        x: 420,
+        y: 260,
+        dx: -2.1,
+        dy: 1.6,
         radius: 30,
       },
     ];

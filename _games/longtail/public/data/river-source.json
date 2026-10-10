@@ -1,0 +1,1010 @@
+{
+  "version": 0.6,
+  "generator": "Overpass API 0.7.62.11 87bfad18",
+  "osm3s": {
+    "timestamp_osm_base": "2026-05-31T22:37:44Z",
+    "copyright": "The data included in this document is from www.openstreetmap.org. The data is made available under ODbL."
+  },
+  "elements": [
+
+{
+  "type": "way",
+  "id": 32069903,
+  "bounds": {
+    "minlat": 13.7193107,
+    "minlon": 100.5120759,
+    "maxlat": 13.7289077,
+    "maxlon": 100.5127623
+  },
+  "nodes": [
+    8125141014,
+    285086085,
+    10752135399,
+    285086113,
+    1691582231,
+    11081344469,
+    285086141,
+    360019889,
+    8125140799
+  ],
+  "geometry": [
+    { "lat": 13.7289077, "lon": 100.5123773 },
+    { "lat": 13.7283718, "lon": 100.5124836 },
+    { "lat": 13.7283310, "lon": 100.5124887 },
+    { "lat": 13.7263395, "lon": 100.5127358 },
+    { "lat": 13.7257667, "lon": 100.5127623 },
+    { "lat": 13.7242873, "lon": 100.5127051 },
+    { "lat": 13.7223888, "lon": 100.5126318 },
+    { "lat": 13.7193408, "lon": 100.5120850 },
+    { "lat": 13.7193107, "lon": 100.5120759 }
+  ],
+  "tags": {
+    "admin_level": "6",
+    "boat": "yes",
+    "name": "แม่น้ำเจ้าพระยา",
+    "name:de": "Chao Phraya",
+    "name:en": "Chao Phraya River",
+    "name:es": "Río Chao Phraya",
+    "name:fr": "Chao Phraya",
+    "name:it": "Chao Phraya",
+    "name:ja": "チャオプラヤー川",
+    "name:ko": "짜오프라야강",
+    "name:nl": "Menam",
+    "name:pt": "Rio Chao Phraya",
+    "name:ru": "Чаупхрая",
+    "name:th": "แม่น้ำเจ้าพระยา",
+    "name:zh-Hans": "昭披耶河",
+    "name:zh-Hant": "昭披耶河",
+    "waterway": "river"
+  }
+},
+{
+  "type": "way",
+  "id": 156261314,
+  "bounds": {
+    "minlat": 13.7293840,
+    "minlon": 100.5101328,
+    "maxlat": 13.7344203,
+    "maxlon": 100.5122871
+  },
+  "nodes": [
+    285085776,
+    285086018,
+    1689099857,
+    285086049,
+    1645239833,
+    7757107509
+  ],
+  "geometry": [
+    { "lat": 13.7344203, "lon": 100.5101328 },
+    { "lat": 13.7330581, "lon": 100.5109712 },
+    { "lat": 13.7307434, "lon": 100.5119108 },
+    { "lat": 13.7306059, "lon": 100.5119666 },
+    { "lat": 13.7299456, "lon": 100.5121486 },
+    { "lat": 13.7293840, "lon": 100.5122871 }
+  ],
+  "tags": {
+    "admin_level": "6",
+    "boat": "yes",
+    "name": "แม่น้ำเจ้าพระยา",
+    "name:de": "Chao Phraya",
+    "name:en": "Chao Phraya River",
+    "name:es": "Río Chao Phraya",
+    "name:fr": "Chao Phraya",
+    "name:it": "Chao Phraya",
+    "name:ja": "チャオプラヤー川",
+    "name:ko": "짜오프라야강",
+    "name:nl": "Menam",
+    "name:pt": "Rio Chao Phraya",
+    "name:ru": "Чаупхрая",
+    "name:th": "แม่น้ำเจ้าพระยา",
+    "name:zh-Hans": "昭披耶河",
+    "name:zh-Hant": "昭披耶河",
+    "waterway": "river"
+  }
+},
+{
+  "type": "way",
+  "id": 198802031,
+  "bounds": {
+    "minlat": 13.7286040,
+    "minlon": 100.5242406,
+    "maxlat": 13.7316222,
+    "maxlon": 100.5268455
+  },
+  "nodes": [
+    2088898383,
+    2088898382,
+    2088898381,
+    2088898380,
+    2088898379,
+    2088898378,
+    2088898377,
+    2088898376,
+    11091645621,
+    2088898375,
+    2088898373,
+    2088898371,
+    2088898372,
+    11247821557,
+    2088898374,
+    11247821558,
+    2088898370,
+    2088898369,
+    2088898368,
+    11091633292,
+    2088898367,
+    2088898366,
+    2088898365,
+    2088898364,
+    2088898363
+  ],
+  "geometry": [
+    { "lat": 13.7316222, "lon": 100.5242406 },
+    { "lat": 13.7315443, "lon": 100.5243714 },
+    { "lat": 13.7314651, "lon": 100.5245387 },
+    { "lat": 13.7314492, "lon": 100.5246300 },
+    { "lat": 13.7314346, "lon": 100.5247054 },
+    { "lat": 13.7313626, "lon": 100.5247967 },
+    { "lat": 13.7312381, "lon": 100.5248705 },
+    { "lat": 13.7310023, "lon": 100.5249788 },
+    { "lat": 13.7307728, "lon": 100.5250726 },
+    { "lat": 13.7306480, "lon": 100.5251076 },
+    { "lat": 13.7305834, "lon": 100.5251636 },
+    { "lat": 13.7305621, "lon": 100.5252074 },
+    { "lat": 13.7305675, "lon": 100.5252512 },
+    { "lat": 13.7305998, "lon": 100.5253146 },
+    { "lat": 13.7305993, "lon": 100.5253278 },
+    { "lat": 13.7305904, "lon": 100.5253403 },
+    { "lat": 13.7304770, "lon": 100.5254282 },
+    { "lat": 13.7299714, "lon": 100.5257517 },
+    { "lat": 13.7296699, "lon": 100.5259108 },
+    { "lat": 13.7296463, "lon": 100.5259250 },
+    { "lat": 13.7295945, "lon": 100.5260210 },
+    { "lat": 13.7292473, "lon": 100.5263678 },
+    { "lat": 13.7290865, "lon": 100.5265063 },
+    { "lat": 13.7287075, "lon": 100.5267782 },
+    { "lat": 13.7286040, "lon": 100.5268455 }
+  ],
+  "tags": {
+    "alt_name:en": "Old Hua Lamphong Canal",
+    "boat": "no",
+    "name": "คลองหัวลำโพงเก่า",
+    "name:en": "Khlong Hua Lamphong Kao",
+    "name:th": "คลองหัวลำโพงเก่า",
+    "waterway": "river"
+  }
+},
+{
+  "type": "way",
+  "id": 222143515,
+  "bounds": {
+    "minlat": 13.7393120,
+    "minlon": 100.4937779,
+    "maxlat": 13.7407529,
+    "maxlon": 100.4976627
+  },
+  "nodes": [
+    8125141098,
+    285085266,
+    5906652430,
+    285085291,
+    2420906247
+  ],
+  "geometry": [
+    { "lat": 13.7407529, "lon": 100.4937779 },
+    { "lat": 13.7405125, "lon": 100.4941305 },
+    { "lat": 13.7401843, "lon": 100.4947639 },
+    { "lat": 13.7398214, "lon": 100.4957946 },
+    { "lat": 13.7393120, "lon": 100.4976627 }
+  ],
+  "tags": {
+    "admin_level": "6",
+    "boat": "yes",
+    "name": "แม่น้ำเจ้าพระยา",
+    "name:de": "Chao Phraya",
+    "name:en": "Chao Phraya River",
+    "name:es": "Río Chao Phraya",
+    "name:fr": "Chao Phraya",
+    "name:it": "Chao Phraya",
+    "name:ja": "チャオプラヤー川",
+    "name:ko": "짜오프라야강",
+    "name:nl": "Menam",
+    "name:pt": "Rio Chao Phraya",
+    "name:ru": "Чаупхрая",
+    "name:th": "แม่น้ำเจ้าพระยา",
+    "name:zh-Hans": "昭披耶河",
+    "name:zh-Hant": "昭披耶河",
+    "waterway": "river"
+  }
+},
+{
+  "type": "way",
+  "id": 222143516,
+  "bounds": {
+    "minlat": 13.7454531,
+    "minlon": 100.4882248,
+    "maxlat": 13.7480852,
+    "maxlon": 100.4895687
+  },
+  "nodes": [
+    8125141246,
+    285084437,
+    1886961411
+  ],
+  "geometry": [
+    { "lat": 13.7480852, "lon": 100.4882248 },
+    { "lat": 13.7468574, "lon": 100.4886955 },
+    { "lat": 13.7454531, "lon": 100.4895687 }
+  ],
+  "tags": {
+    "boat": "yes",
+    "name": "แม่น้ำเจ้าพระยา",
+    "name:de": "Chao Phraya",
+    "name:en": "Chao Phraya River",
+    "name:es": "Río Chao Phraya",
+    "name:fr": "Chao Phraya",
+    "name:it": "Chao Phraya",
+    "name:ja": "チャオプラヤー川",
+    "name:ko": "짜오프라야강",
+    "name:nl": "Menam",
+    "name:pt": "Rio Chao Phraya",
+    "name:ru": "Чаупхрая",
+    "name:th": "แม่น้ำเจ้าพระยา",
+    "name:zh-Hans": "昭披耶河",
+    "name:zh-Hant": "昭披耶河",
+    "waterway": "river"
+  }
+},
+{
+  "type": "way",
+  "id": 233751177,
+  "bounds": {
+    "minlat": 13.7386948,
+    "minlon": 100.4976627,
+    "maxlat": 13.7393120,
+    "maxlon": 100.4999337
+  },
+  "nodes": [
+    2420906247,
+    5906652412,
+    360016642,
+    8125141071
+  ],
+  "geometry": [
+    { "lat": 13.7393120, "lon": 100.4976627 },
+    { "lat": 13.7388893, "lon": 100.4992124 },
+    { "lat": 13.7387098, "lon": 100.4998706 },
+    { "lat": 13.7386948, "lon": 100.4999337 }
+  ],
+  "tags": {
+    "admin_level": "6",
+    "boat": "yes",
+    "is_in": "Thailand",
+    "name": "แม่น้ำเจ้าพระยา",
+    "name:de": "Chao Phraya",
+    "name:en": "Chao Phraya River",
+    "name:es": "Río Chao Phraya",
+    "name:fr": "Chao Phraya",
+    "name:it": "Chao Phraya",
+    "name:ja": "チャオプラヤー川",
+    "name:ko": "짜오프라야강",
+    "name:nl": "Menam",
+    "name:pt": "Rio Chao Phraya",
+    "name:ru": "Чаупхрая",
+    "name:th": "แม่น้ำเจ้าพระยา",
+    "name:zh-Hans": "昭披耶河",
+    "name:zh-Hant": "昭披耶河",
+    "waterway": "river"
+  }
+},
+{
+  "type": "way",
+  "id": 783145623,
+  "bounds": {
+    "minlat": 13.7283705,
+    "minlon": 100.5269748,
+    "maxlat": 13.7284513,
+    "maxlon": 100.5270242
+  },
+  "nodes": [
+    10078051237,
+    7313680574,
+    10078051236
+  ],
+  "geometry": [
+    { "lat": 13.7284513, "lon": 100.5269748 },
+    { "lat": 13.7283826, "lon": 100.5270164 },
+    { "lat": 13.7283705, "lon": 100.5270242 }
+  ],
+  "tags": {
+    "alt_name:en": "Old Hua Lamphong Canal",
+    "boat": "no",
+    "name": "คลองหัวลำโพงเก่า",
+    "name:en": "Khlong Hua Lamphong Kao",
+    "waterway": "river"
+  }
+},
+{
+  "type": "way",
+  "id": 783824641,
+  "bounds": {
+    "minlat": 13.7423108,
+    "minlon": 100.4899019,
+    "maxlat": 13.7449565,
+    "maxlon": 100.4920261
+  },
+  "nodes": [
+    7321277001,
+    285084676,
+    722353846,
+    8125141374
+  ],
+  "geometry": [
+    { "lat": 13.7449565, "lon": 100.4899019 },
+    { "lat": 13.7435562, "lon": 100.4909090 },
+    { "lat": 13.7424385, "lon": 100.4919034 },
+    { "lat": 13.7423108, "lon": 100.4920261 }
+  ],
+  "tags": {
+    "boat": "yes",
+    "name": "แม่น้ำเจ้าพระยา",
+    "name:de": "Chao Phraya",
+    "name:en": "Chao Phraya River",
+    "name:es": "Río Chao Phraya",
+    "name:fr": "Chao Phraya",
+    "name:it": "Chao Phraya",
+    "name:ja": "チャオプラヤー川",
+    "name:ko": "짜오프라야강",
+    "name:nl": "Menam",
+    "name:pt": "Rio Chao Phraya",
+    "name:ru": "Чаупхрая",
+    "name:th": "แม่น้ำเจ้าพระยา",
+    "name:zh-Hans": "昭披耶河",
+    "name:zh-Hant": "昭披耶河",
+    "waterway": "river"
+  }
+},
+{
+  "type": "way",
+  "id": 783824642,
+  "bounds": {
+    "minlat": 13.7449565,
+    "minlon": 100.4898046,
+    "maxlat": 13.7451015,
+    "maxlon": 100.4899019
+  },
+  "nodes": [
+    7321277002,
+    7321277001
+  ],
+  "geometry": [
+    { "lat": 13.7451015, "lon": 100.4898046 },
+    { "lat": 13.7449565, "lon": 100.4899019 }
+  ],
+  "tags": {
+    "boat": "yes",
+    "image": "https://images.mapillary.com/39DtKmZdDynQXncQOSxbCg/thumb-2048.jpg",
+    "mapillary": "541597474140612",
+    "name": "แม่น้ำเจ้าพระยา",
+    "name:de": "Chao Phraya",
+    "name:en": "Chao Phraya River",
+    "name:es": "Río Chao Phraya",
+    "name:fr": "Chao Phraya",
+    "name:it": "Chao Phraya",
+    "name:ja": "チャオプラヤー川",
+    "name:ko": "짜오프라야강",
+    "name:nl": "Menam",
+    "name:pt": "Rio Chao Phraya",
+    "name:ru": "Чаупхрая",
+    "name:th": "แม่น้ำเจ้าพระยา",
+    "name:zh-Hans": "昭披耶河",
+    "name:zh-Hant": "昭披耶河",
+    "waterway": "river"
+  }
+},
+{
+  "type": "way",
+  "id": 783824643,
+  "bounds": {
+    "minlat": 13.7452678,
+    "minlon": 100.4895687,
+    "maxlat": 13.7454531,
+    "maxlon": 100.4896930
+  },
+  "nodes": [
+    1886961411,
+    7321277003
+  ],
+  "geometry": [
+    { "lat": 13.7454531, "lon": 100.4895687 },
+    { "lat": 13.7452678, "lon": 100.4896930 }
+  ],
+  "tags": {
+    "boat": "yes",
+    "image": "https://images.mapillary.com/LivfIlGgNrLE_U-6yIOKgg/thumb-2048.jpg",
+    "mapillary": "1375224089662328",
+    "name": "แม่น้ำเจ้าพระยา",
+    "name:de": "Chao Phraya",
+    "name:en": "Chao Phraya River",
+    "name:es": "Río Chao Phraya",
+    "name:fr": "Chao Phraya",
+    "name:it": "Chao Phraya",
+    "name:ja": "チャオプラヤー川",
+    "name:ko": "짜오프라야강",
+    "name:nl": "Menam",
+    "name:pt": "Rio Chao Phraya",
+    "name:ru": "Чаупхрая",
+    "name:th": "แม่น้ำเจ้าพระยา",
+    "name:zh-Hans": "昭披耶河",
+    "name:zh-Hant": "昭披耶河",
+    "waterway": "river"
+  }
+},
+{
+  "type": "way",
+  "id": 783824644,
+  "bounds": {
+    "minlat": 13.7451015,
+    "minlon": 100.4896930,
+    "maxlat": 13.7452678,
+    "maxlon": 100.4898046
+  },
+  "nodes": [
+    7321277003,
+    7321277002
+  ],
+  "geometry": [
+    { "lat": 13.7452678, "lon": 100.4896930 },
+    { "lat": 13.7451015, "lon": 100.4898046 }
+  ],
+  "tags": {
+    "boat": "yes",
+    "name": "แม่น้ำเจ้าพระยา",
+    "name:de": "Chao Phraya",
+    "name:en": "Chao Phraya River",
+    "name:es": "Río Chao Phraya",
+    "name:fr": "Chao Phraya",
+    "name:it": "Chao Phraya",
+    "name:ja": "チャオプラヤー川",
+    "name:ko": "짜오프라야강",
+    "name:nl": "Menam",
+    "name:pt": "Rio Chao Phraya",
+    "name:ru": "Чаупхрая",
+    "name:th": "แม่น้ำเจ้าพระยา",
+    "name:zh-Hans": "昭披耶河",
+    "name:zh-Hant": "昭披耶河",
+    "waterway": "river"
+  }
+},
+{
+  "type": "way",
+  "id": 784180121,
+  "bounds": {
+    "minlat": 13.7480852,
+    "minlon": 100.4875804,
+    "maxlat": 13.7601779,
+    "maxlon": 100.4893673
+  },
+  "nodes": [
+    8125143868,
+    305724336,
+    285078542,
+    7757107561,
+    285078560,
+    285078603,
+    1038984556,
+    285079067,
+    312064741,
+    8125141246
+  ],
+  "geometry": [
+    { "lat": 13.7601779, "lon": 100.4893673 },
+    { "lat": 13.7599057, "lon": 100.4891758 },
+    { "lat": 13.7586920, "lon": 100.4885363 },
+    { "lat": 13.7571224, "lon": 100.4879844 },
+    { "lat": 13.7556928, "lon": 100.4877523 },
+    { "lat": 13.7524610, "lon": 100.4875804 },
+    { "lat": 13.7515499, "lon": 100.4876545 },
+    { "lat": 13.7495631, "lon": 100.4878848 },
+    { "lat": 13.7481302, "lon": 100.4882075 },
+    { "lat": 13.7480852, "lon": 100.4882248 }
+  ],
+  "tags": {
+    "boat": "yes",
+    "name": "แม่น้ำเจ้าพระยา",
+    "name:de": "Chao Phraya",
+    "name:en": "Chao Phraya River",
+    "name:es": "Río Chao Phraya",
+    "name:fr": "Chao Phraya",
+    "name:it": "Chao Phraya",
+    "name:ja": "チャオプラヤー川",
+    "name:ko": "짜오프라야강",
+    "name:nl": "Menam",
+    "name:pt": "Rio Chao Phraya",
+    "name:ru": "Чаупхрая",
+    "name:th": "แม่น้ำเจ้าพระยา",
+    "name:zh-Hans": "昭披耶河",
+    "name:zh-Hant": "昭披耶河",
+    "waterway": "river"
+  }
+},
+{
+  "type": "way",
+  "id": 830066224,
+  "bounds": {
+    "minlat": 13.7227663,
+    "minlon": 100.4785426,
+    "maxlat": 13.7276273,
+    "maxlon": 100.4854782
+  },
+  "nodes": [
+    1672566490,
+    1798011720,
+    312065371,
+    5942036688,
+    312065372,
+    3580648824,
+    312065373,
+    3585868162,
+    312065374,
+    312065376,
+    3585868166,
+    3580648814,
+    7757107549,
+    7757107522
+  ],
+  "geometry": [
+    { "lat": 13.7227663, "lon": 100.4785426 },
+    { "lat": 13.7228032, "lon": 100.4787320 },
+    { "lat": 13.7229395, "lon": 100.4794319 },
+    { "lat": 13.7232698, "lon": 100.4805402 },
+    { "lat": 13.7235801, "lon": 100.4815354 },
+    { "lat": 13.7237746, "lon": 100.4820793 },
+    { "lat": 13.7242986, "lon": 100.4834402 },
+    { "lat": 13.7243694, "lon": 100.4835470 },
+    { "lat": 13.7249073, "lon": 100.4843586 },
+    { "lat": 13.7257828, "lon": 100.4847448 },
+    { "lat": 13.7258178, "lon": 100.4847574 },
+    { "lat": 13.7267449, "lon": 100.4851217 },
+    { "lat": 13.7273241, "lon": 100.4853907 },
+    { "lat": 13.7276273, "lon": 100.4854782 }
+  ],
+  "tags": {
+    "boat": "yes",
+    "name": "คลองบางกอกใหญ่",
+    "name:en": "Khlong Bangkok Yai",
+    "name:th": "คลองบางกอกใหญ่",
+    "waterway": "river"
+  }
+},
+{
+  "type": "way",
+  "id": 830801708,
+  "bounds": {
+    "minlat": 13.7376375,
+    "minlon": 100.4999337,
+    "maxlat": 13.7386948,
+    "maxlon": 100.5040513
+  },
+  "nodes": [
+    8125141071,
+    285085546,
+    7757107508
+  ],
+  "geometry": [
+    { "lat": 13.7386948, "lon": 100.4999337 },
+    { "lat": 13.7380681, "lon": 100.5025681 },
+    { "lat": 13.7376375, "lon": 100.5040513 }
+  ],
+  "tags": {
+    "admin_level": "6",
+    "boat": "yes",
+    "name": "แม่น้ำเจ้าพระยา",
+    "name:de": "Chao Phraya",
+    "name:en": "Chao Phraya River",
+    "name:es": "Río Chao Phraya",
+    "name:fr": "Chao Phraya",
+    "name:it": "Chao Phraya",
+    "name:ja": "チャオプラヤー川",
+    "name:ko": "짜오프라야강",
+    "name:nl": "Menam",
+    "name:pt": "Rio Chao Phraya",
+    "name:ru": "Чаупхрая",
+    "name:th": "แม่น้ำเจ้าพระยา",
+    "name:zh-Hans": "昭披耶河",
+    "name:zh-Hant": "昭披耶河",
+    "waterway": "river"
+  }
+},
+{
+  "type": "way",
+  "id": 830801713,
+  "bounds": {
+    "minlat": 13.7289077,
+    "minlon": 100.5122871,
+    "maxlat": 13.7293840,
+    "maxlon": 100.5123773
+  },
+  "nodes": [
+    7757107509,
+    313175750,
+    8125141014
+  ],
+  "geometry": [
+    { "lat": 13.7293840, "lon": 100.5122871 },
+    { "lat": 13.7290515, "lon": 100.5123488 },
+    { "lat": 13.7289077, "lon": 100.5123773 }
+  ],
+  "tags": {
+    "admin_level": "6",
+    "boat": "yes",
+    "name": "แม่น้ำเจ้าพระยา",
+    "name:de": "Chao Phraya",
+    "name:en": "Chao Phraya River",
+    "name:es": "Río Chao Phraya",
+    "name:fr": "Chao Phraya",
+    "name:it": "Chao Phraya",
+    "name:ja": "チャオプラヤー川",
+    "name:ko": "짜오프라야강",
+    "name:nl": "Menam",
+    "name:pt": "Rio Chao Phraya",
+    "name:ru": "Чаупхрая",
+    "name:th": "แม่น้ำเจ้าพระยา",
+    "name:zh-Hans": "昭披耶河",
+    "name:zh-Hant": "昭披耶河",
+    "waterway": "river"
+  }
+},
+{
+  "type": "way",
+  "id": 830801716,
+  "bounds": {
+    "minlat": 13.7123371,
+    "minlon": 100.5081878,
+    "maxlat": 13.7173163,
+    "maxlon": 100.5113230
+  },
+  "nodes": [
+    722332852,
+    285086196,
+    285086473,
+    8125140683
+  ],
+  "geometry": [
+    { "lat": 13.7173163, "lon": 100.5113230 },
+    { "lat": 13.7150456, "lon": 100.5101331 },
+    { "lat": 13.7125478, "lon": 100.5083604 },
+    { "lat": 13.7123371, "lon": 100.5081878 }
+  ],
+  "tags": {
+    "boat": "yes",
+    "name": "แม่น้ำเจ้าพระยา",
+    "name:de": "Chao Phraya",
+    "name:en": "Chao Phraya River",
+    "name:es": "Río Chao Phraya",
+    "name:fr": "Chao Phraya",
+    "name:it": "Chao Phraya",
+    "name:ja": "チャオプラヤー川",
+    "name:ko": "짜오프라야강",
+    "name:nl": "Menam",
+    "name:pt": "Rio Chao Phraya",
+    "name:ru": "Чаупхрая",
+    "name:th": "แม่น้ำเจ้าพระยา",
+    "name:zh-Hans": "昭披耶河",
+    "name:zh-Hant": "昭披耶河",
+    "waterway": "river"
+  }
+},
+{
+  "type": "way",
+  "id": 830801748,
+  "bounds": {
+    "minlat": 13.7276273,
+    "minlon": 100.4854782,
+    "maxlat": 13.7360744,
+    "maxlon": 100.4876860
+  },
+  "nodes": [
+    7757107522,
+    9415230141,
+    312065460,
+    1798016446,
+    669640001,
+    9415230142,
+    669640002,
+    722353861,
+    722353854,
+    1038984540,
+    722353833,
+    7757107526
+  ],
+  "geometry": [
+    { "lat": 13.7276273, "lon": 100.4854782 },
+    { "lat": 13.7277325, "lon": 100.4855085 },
+    { "lat": 13.7285488, "lon": 100.4857433 },
+    { "lat": 13.7316659, "lon": 100.4861807 },
+    { "lat": 13.7324936, "lon": 100.4862969 },
+    { "lat": 13.7328461, "lon": 100.4864279 },
+    { "lat": 13.7341356, "lon": 100.4869073 },
+    { "lat": 13.7346528, "lon": 100.4870675 },
+    { "lat": 13.7350950, "lon": 100.4872273 },
+    { "lat": 13.7353493, "lon": 100.4873358 },
+    { "lat": 13.7356971, "lon": 100.4874843 },
+    { "lat": 13.7360744, "lon": 100.4876860 }
+  ],
+  "tags": {
+    "boat": "yes",
+    "name": "คลองบางกอกใหญ่",
+    "name:en": "Khlong Bangkok Yai",
+    "name:th": "คลองบางกอกใหญ่",
+    "waterway": "river"
+  }
+},
+{
+  "type": "way",
+  "id": 830801758,
+  "bounds": {
+    "minlat": 13.7173163,
+    "minlon": 100.5113230,
+    "maxlat": 13.7193107,
+    "maxlon": 100.5120759
+  },
+  "nodes": [
+    8125140799,
+    285086167,
+    722332844,
+    722332852
+  ],
+  "geometry": [
+    { "lat": 13.7193107, "lon": 100.5120759 },
+    { "lat": 13.7183172, "lon": 100.5117743 },
+    { "lat": 13.7175152, "lon": 100.5114207 },
+    { "lat": 13.7173163, "lon": 100.5113230 }
+  ],
+  "tags": {
+    "boat": "yes",
+    "name": "แม่น้ำเจ้าพระยา",
+    "name:de": "Chao Phraya",
+    "name:en": "Chao Phraya River",
+    "name:es": "Río Chao Phraya",
+    "name:fr": "Chao Phraya",
+    "name:it": "Chao Phraya",
+    "name:ja": "チャオプラヤー川",
+    "name:ko": "짜오프라야강",
+    "name:nl": "Menam",
+    "name:pt": "Rio Chao Phraya",
+    "name:ru": "Чаупхрая",
+    "name:th": "แม่น้ำเจ้าพระยา",
+    "name:zh-Hans": "昭披耶河",
+    "name:zh-Hant": "昭披耶河",
+    "waterway": "river"
+  }
+},
+{
+  "type": "way",
+  "id": 830801759,
+  "bounds": {
+    "minlat": 13.7360744,
+    "minlon": 100.4876860,
+    "maxlat": 13.7424385,
+    "maxlon": 100.4919034
+  },
+  "nodes": [
+    7757107526,
+    722353858,
+    722353839,
+    5125945157,
+    722353863,
+    722353844,
+    722353835,
+    722353849,
+    1544445590,
+    722353840,
+    722353855,
+    722353846
+  ],
+  "geometry": [
+    { "lat": 13.7360744, "lon": 100.4876860 },
+    { "lat": 13.7364292, "lon": 100.4878756 },
+    { "lat": 13.7371836, "lon": 100.4882416 },
+    { "lat": 13.7374760, "lon": 100.4883362 },
+    { "lat": 13.7380017, "lon": 100.4885064 },
+    { "lat": 13.7388617, "lon": 100.4889204 },
+    { "lat": 13.7392539, "lon": 100.4891515 },
+    { "lat": 13.7397445, "lon": 100.4894981 },
+    { "lat": 13.7398024, "lon": 100.4895308 },
+    { "lat": 13.7402858, "lon": 100.4898037 },
+    { "lat": 13.7407694, "lon": 100.4902720 },
+    { "lat": 13.7424385, "lon": 100.4919034 }
+  ],
+  "tags": {
+    "boat": "yes",
+    "name": "คลองบางกอกใหญ่",
+    "name:en": "Khlong Bangkok Yai",
+    "name:th": "คลองบางกอกใหญ่",
+    "waterway": "river"
+  }
+},
+{
+  "type": "way",
+  "id": 832948765,
+  "bounds": {
+    "minlat": 13.7344203,
+    "minlon": 100.5065910,
+    "maxlat": 13.7368529,
+    "maxlon": 100.5101328
+  },
+  "nodes": [
+    7775772061,
+    360019850,
+    7757107525,
+    285085776
+  ],
+  "geometry": [
+    { "lat": 13.7368529, "lon": 100.5065910 },
+    { "lat": 13.7361713, "lon": 100.5081300 },
+    { "lat": 13.7354456, "lon": 100.5092221 },
+    { "lat": 13.7344203, "lon": 100.5101328 }
+  ],
+  "tags": {
+    "admin_level": "6",
+    "boat": "yes",
+    "name": "แม่น้ำเจ้าพระยา",
+    "name:de": "Chao Phraya",
+    "name:en": "Chao Phraya River",
+    "name:es": "Río Chao Phraya",
+    "name:fr": "Chao Phraya",
+    "name:it": "Chao Phraya",
+    "name:ja": "チャオプラヤー川",
+    "name:ko": "짜오프라야강",
+    "name:nl": "Menam",
+    "name:pt": "Rio Chao Phraya",
+    "name:ru": "Чаупхрая",
+    "name:th": "แม่น้ำเจ้าพระยา",
+    "name:zh-Hans": "昭披耶河",
+    "name:zh-Hant": "昭披耶河",
+    "waterway": "river"
+  }
+},
+{
+  "type": "way",
+  "id": 832948768,
+  "bounds": {
+    "minlat": 13.7368529,
+    "minlon": 100.5040513,
+    "maxlat": 13.7376375,
+    "maxlon": 100.5065910
+  },
+  "nodes": [
+    7757107508,
+    285085685,
+    11101898145,
+    7775772061
+  ],
+  "geometry": [
+    { "lat": 13.7376375, "lon": 100.5040513 },
+    { "lat": 13.7370467, "lon": 100.5060792 },
+    { "lat": 13.7368668, "lon": 100.5065542 },
+    { "lat": 13.7368529, "lon": 100.5065910 }
+  ],
+  "tags": {
+    "admin_level": "6",
+    "boat": "yes",
+    "name": "แม่น้ำเจ้าพระยา",
+    "name:de": "Chao Phraya",
+    "name:en": "Chao Phraya River",
+    "name:es": "Río Chao Phraya",
+    "name:fr": "Chao Phraya",
+    "name:it": "Chao Phraya",
+    "name:ja": "チャオプラヤー川",
+    "name:ko": "짜오프라야강",
+    "name:nl": "Menam",
+    "name:pt": "Rio Chao Phraya",
+    "name:ru": "Чаупхрая",
+    "name:th": "แม่น้ำเจ้าพระยา",
+    "name:zh-Hans": "昭披耶河",
+    "name:zh-Hant": "昭披耶河",
+    "waterway": "river"
+  }
+},
+{
+  "type": "way",
+  "id": 832948787,
+  "bounds": {
+    "minlat": 13.7407529,
+    "minlon": 100.4920261,
+    "maxlat": 13.7423108,
+    "maxlon": 100.4937779
+  },
+  "nodes": [
+    8125141374,
+    285084702,
+    5906652413,
+    1886961377,
+    8125141098
+  ],
+  "geometry": [
+    { "lat": 13.7423108, "lon": 100.4920261 },
+    { "lat": 13.7420252, "lon": 100.4923003 },
+    { "lat": 13.7411518, "lon": 100.4932769 },
+    { "lat": 13.7408369, "lon": 100.4936547 },
+    { "lat": 13.7407529, "lon": 100.4937779 }
+  ],
+  "tags": {
+    "admin_level": "6",
+    "boat": "yes",
+    "name": "แม่น้ำเจ้าพระยา",
+    "name:de": "Chao Phraya",
+    "name:en": "Chao Phraya River",
+    "name:es": "Río Chao Phraya",
+    "name:fr": "Chao Phraya",
+    "name:it": "Chao Phraya",
+    "name:ja": "チャオプラヤー川",
+    "name:ko": "짜오프라야강",
+    "name:nl": "Menam",
+    "name:pt": "Rio Chao Phraya",
+    "name:ru": "Чаупхрая",
+    "name:th": "แม่น้ำเจ้าพระยา",
+    "name:zh-Hans": "昭披耶河",
+    "name:zh-Hant": "昭披耶河",
+    "waterway": "river"
+  }
+},
+{
+  "type": "way",
+  "id": 1101276561,
+  "bounds": {
+    "minlat": 13.7283254,
+    "minlon": 100.5270242,
+    "maxlat": 13.7283705,
+    "maxlon": 100.5270532
+  },
+  "nodes": [
+    10078051236,
+    2088898361
+  ],
+  "geometry": [
+    { "lat": 13.7283705, "lon": 100.5270242 },
+    { "lat": 13.7283254, "lon": 100.5270532 }
+  ],
+  "tags": {
+    "alt_name:en": "Old Hua Lamphong Canal",
+    "boat": "no",
+    "layer": "-1",
+    "name": "คลองหัวลำโพงเก่า",
+    "name:en": "Khlong Hua Lamphong Kao",
+    "tunnel": "culvert",
+    "waterway": "river"
+  }
+},
+{
+  "type": "way",
+  "id": 1101276562,
+  "bounds": {
+    "minlat": 13.7284513,
+    "minlon": 100.5268455,
+    "maxlat": 13.7286040,
+    "maxlon": 100.5269748
+  },
+  "nodes": [
+    2088898363,
+    10078051237
+  ],
+  "geometry": [
+    { "lat": 13.7286040, "lon": 100.5268455 },
+    { "lat": 13.7284513, "lon": 100.5269748 }
+  ],
+  "tags": {
+    "alt_name:en": "Old Hua Lamphong Canal",
+    "boat": "no",
+    "layer": "-1",
+    "name": "คลองหัวลำโพงเก่า",
+    "name:en": "Khlong Hua Lamphong Kao",
+    "tunnel": "culvert",
+    "waterway": "river"
+  }
+}
+
+  ]
+}
