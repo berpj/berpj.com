@@ -46,10 +46,10 @@ function windowsMaterial(key, columns = 24, rows = 60, warm = false) {
     const cw = w / columns, rh = h / rows;
     for (let row = 0; row < rows; row++) for (let col = 0; col < columns; col++) {
       const n = hash(row * 91 + col * 53 + key.length * 37);
-      ctx.fillStyle = n > .55 ? ['#e4bd75', '#b69b62', '#e6d6a3', '#816e49'][Math.floor(hash(row * 13 + col) * 4)] : n > .25 ? '#2d3c42' : '#122029';
+      ctx.fillStyle = n > .70 ? ['#c29b60', '#aa8b54', '#c6b588', '#736044'][Math.floor(hash(row * 13 + col) * 4)] : n > .38 ? '#1b262c' : '#0d151c';
       ctx.fillRect(col * cw + 2, row * rh + 2, cw - 4, rh - 4);
       if (n > .77) { ctx.fillStyle = '#414238'; ctx.fillRect(col * cw + cw * .6, row * rh + 2, cw * .23, rh - 4); }
-      ctx.fillStyle = '#566363'; ctx.fillRect(col * cw, row * rh, 1.3, rh);
+      ctx.fillStyle = '#283236'; ctx.fillRect(col * cw, row * rh, 1.3, rh);
     }
   });
   const material = c(key, '#aab6b6', { map, emissiveMap: map, emissive: '#eee6ca', emissiveIntensity: .65, metalness: .3, roughness: .42 });
@@ -343,7 +343,7 @@ function iconSiam(b) {
   facetedTower(b, -61, -60, 42, 38, 282, 78, 'icon-tower-a');
   facetedTower(b, 43, -71, 35, 34, 224, 62, 'icon-tower-b');
   b.box(226, 3, 86, 0, 1.5, -3, M.stone);
-  const glazing = windowsMaterial('icon-mall-glass', 42, 5, true);
+  const glazing = windowsMaterial('icon-mall-glass', 42, 2, true);
   for (let tier = 0; tier < 4; tier++) {
     const w = 218 - tier * 12, d = 78 - tier * 10, y = 4 + tier * 7;
     b.box(w, 7, d, 0, y + 3.5, -tier * 4, glazing);

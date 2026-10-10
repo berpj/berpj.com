@@ -1,5 +1,7 @@
 import * as THREE from 'three';
-import {Water} from 'three/addons/objects/Water.js';
+import {createNightSky,createNightWater} from './night.js';
+import {createRiverfront} from './riverfront.js';
+import {createFountains} from './fountains.js';
 import {mergeGeometries} from 'three/addons/utils/BufferGeometryUtils.js';
 import {buildLandmark} from './landmarks.js';
 import {project,clamp} from './river.mjs';
@@ -19,10 +21,21 @@ export function sign(text,w=20,h=4,bg='#13283c',fg='#ffde9b'){
  return new THREE.Mesh(new THREE.PlaneGeometry(w,h),new THREE.MeshBasicMaterial({map:texture,side:THREE.DoubleSide,toneMapped:false}));
 }
 function cityMaterial(index, floors=12){
- const c=document.createElement('canvas');c.width=256;c.height=512;const ctx=c.getContext('2d');ctx.fillStyle=['#38404b','#4a4746','#444951','#424c51','#605750'][index%5];ctx.fillRect(0,0,256,512);
- const cellY=512/floors,cellX=256/(index%2?8:6);for(let y=4;y<512;y+=cellY)for(let x=4;x<256;x+=cellX){const lit=random()>.63;ctx.fillStyle=lit?['#d9aa63','#9ab0b9','#bd8d52','#e6c99c'][Math.floor(random()*4)]:'#1b2c3e';ctx.globalAlpha=lit?.35+random()*.65:.8;ctx.fillRect(x,y,cellX*.6,cellY*.58);ctx.globalAlpha=1;ctx.fillStyle='#243542';ctx.fillRect(x+cellX*.3,y,1,cellY*.58);}
- const tex=new THREE.CanvasTexture(c);tex.colorSpace=THREE.SRGBColorSpace;tex.anisotropy=4;
- return new THREE.MeshStandardMaterial({map:tex,emissiveMap:tex,emissive:0xffffff,emissiveIntensity:.7,roughness:.7,color:0x86949c});
+ const canvas=document.createElement('canvas'),emission=document.createElement('canvas');canvas.width=emission.width=384;canvas.height=emission.height=768;
+ const c=canvas.getContext('2d'),e=emission.getContext('2d');c.fillStyle=['#32353a','#3b3832','#333c3e','#2a3138','#52463a'][index%5];c.fillRect(0,0,384,768);e.fillStyle='#000';e.fillRect(0,0,384,768);
+ const rows=floors,cols=index%2?8:6,cw=384/cols,rh=768/rows;
+ for(let row=0;row<rows;row++)for(let col=0;col<cols;col++){
+  const x=col*cw+6,y=row*rh+5,lit=random()>.64,w=cw-12,h=rh*.68;
+  c.fillStyle='#0b151b';c.fillRect(x,y,w,h);
+  if(lit){const color=['#d7a764','#e1be89','#a2b7b4','#d6cbaf'][Math.floor(random()*4)];e.fillStyle=color;e.globalAlpha=.25+random()*.65;e.fillRect(x,y,w,h);e.globalAlpha=1;
+   e.fillStyle='#050708';e.fillRect(x+w*(.25+random()*.4),y,w*.17,h);e.fillRect(x,y+h*.82,w,h*.18);
+   if(random()>.55){e.fillStyle='#17150e';e.fillRect(x+4,y+h*.55,w*.35,h*.35);}
+  }
+  c.fillStyle='#52524e';c.fillRect(x-1,y+h,w+3,2);e.fillStyle='#000';e.fillRect(x+w*.5,y,2,h);
+  c.fillStyle='#202927';c.fillRect(col*cw,row*rh,384,2);
+ }
+ const map=new THREE.CanvasTexture(canvas),light=new THREE.CanvasTexture(emission);map.colorSpace=light.colorSpace=THREE.SRGBColorSpace;map.anisotropy=light.anisotropy=4;
+ return new THREE.MeshStandardMaterial({map,emissiveMap:light,emissive:0xfff3dc,emissiveIntensity:1.9,roughness:.64,color:0x87969d});
 }
 export const LANDMARKS=[
  ['wat-arun','Wat Arun',100.488905,13.7436982,1],
@@ -37,7 +50,7 @@ export const LANDMARKS=[
  ['state-tower','State Tower',100.516897,13.7215374,-1],
 ];
 export function createWorld(scene,river,piers,mobile){
- const warm=M(0xd3b88b,0xffb34e,.3),stone=M(0x515558),rail=M(0x23323b),glow=new THREE.MeshBasicMaterial({color:0xffcb83,toneMapped:false}),cyan=new THREE.MeshBasicMaterial({color:0x64c6be,toneMapped:false});
+ const warm=M(0xd3b88b,0xffb34e,.3),stone=M(0x515558),rail=M(0x23323b),glow=new THREE.MeshBasicMaterial({color:new THREE.Color(0xffcb83).multiplyScalar(2.5)}),cyan=new THREE.MeshBasicMaterial({color:new THREE.Color(0x64c6be).multiplyScalar(1.6)});
  const buildings=new THREE.Group();scene.add(buildings);
  const points=[];for(let d=0;d<river.length;d+=20)points.push(river.sample(d));points.push(river.sample(river.length));
  const banks=side=>points.map(p=>new THREE.Vector2(p.x+p.nx*side*p.width/2,-(p.z+p.nz*side*p.width/2)));
@@ -46,9 +59,7 @@ export function createWorld(scene,river,piers,mobile){
  for(const list of [west,east]){const first=list===west?0:list.length-1,last=list===west?list.length-1:0;const a=river.sample(0),b=river.sample(river.length);list[first].x+=Math.sin(a.heading)*1600;list[first].y-=Math.cos(a.heading)*1600;list[last].x-=Math.sin(b.heading)*1600;list[last].y+=Math.cos(b.heading)*1600;}
  const land=new THREE.Shape([new THREE.Vector2(-5500,-5500),new THREE.Vector2(5500,-5500),new THREE.Vector2(5500,5500),new THREE.Vector2(-5500,5500)]);land.holes.push(new THREE.Path(holePoints));
  const geo=new THREE.ExtrudeGeometry(land,{depth:4,bevelEnabled:false,steps:1});geo.rotateX(-Math.PI/2);const landMesh=new THREE.Mesh(geo,M(0x252e2e));landMesh.position.y=-1;scene.add(landMesh);
- const waters=new Uint8Array(128*128*4);const waves=Array.from({length:18},(_,i)=>({x:Math.round(random()*14-7)||1,y:Math.round(random()*14-7)||1,phase:random()*6.283,amp:.6/(1+i*.28)}));for(let y=0;y<128;y++)for(let x=0;x<128;x++){const i=(y*128+x)*4;let a=0,b=0;for(const w of waves){const v=Math.cos((x*w.x+y*w.y)/128*Math.PI*2+w.phase)*w.amp;a+=v*w.x*.1;b+=v*w.y*.1;}waters[i]=clamp(128+a*32,0,255);waters[i+1]=clamp(128+b*32,0,255);waters[i+2]=248;waters[i+3]=255;}
- const normal=new THREE.DataTexture(waters,128,128);normal.wrapS=normal.wrapT=THREE.RepeatWrapping;normal.needsUpdate=true;
- const water=new Water(new THREE.PlaneGeometry(14000,14000),{textureWidth:mobile?256:512,textureHeight:mobile?256:512,waterNormals:normal,sunDirection:new THREE.Vector3(-.5,.8,-.2),sunColor:0x53617d,waterColor:0x061a20,distortionScale:2.1,fog:true});water.rotation.x=-Math.PI/2;water.position.y=.04;water.material.uniforms.size.value=1.2;scene.add(water);
+ const nightWater=createNightWater(scene,mobile),water=nightWater.water;
  const landmarks=[];
  for(const [kind,name,lon,lat,side]of LANDMARKS){
   const p=project(lon,lat),n=river.nearest(p.x,p.z);
@@ -58,14 +69,16 @@ export function createWorld(scene,river,piers,mobile){
   const bounds=new THREE.Box3().setFromObject(model);landmarks.push({kind,name,x:safe.x,z:safe.z,distance:n.distance,bounds,side,reserveLength:(localBounds.max.x-localBounds.min.x)/2+22,inland:offset-localBounds.min.z+20});
  }
  // Dense, varied riverside fabric; reserved landmark footprints are kept clear.
- const mats=Array.from({length:5},(_,i)=>[cityMaterial(i,4),cityMaterial(i,10),cityMaterial(i,22)]);const photo=new THREE.TextureLoader().load(`${import.meta.env.BASE_URL}textures/riverside-shophouses.png`);photo.colorSpace=THREE.SRGBColorSpace;photo.anisotropy=4;const shophouse=new THREE.MeshStandardMaterial({map:photo,color:0xa6a8a2,emissiveMap:photo,emissive:0xffd9a0,emissiveIntensity:.12,roughness:.95});const batch=new Batch(),roof=M(0x283239),market=M(0x7b4435),leaf=M(0x233f30),trunk=M(0x44352c);
+ const mats=Array.from({length:5},(_,i)=>[cityMaterial(i,4),cityMaterial(i,10),cityMaterial(i,22)]);const photo=new THREE.TextureLoader().load(`${import.meta.env.BASE_URL}textures/riverside-shophouses.png`);photo.colorSpace=THREE.SRGBColorSpace;photo.anisotropy=4;const shophouse=new THREE.MeshStandardMaterial({map:photo,color:0xa6a8a2,emissiveMap:photo,emissive:0xffd9a0,emissiveIntensity:.035,roughness:.95});const batch=new Batch(),roof=M(0x283239),market=M(0x7b4435),leaf=M(0x233f30),trunk=M(0x44352c);
  for(let d=20;d<river.length;d+=35){for(const side of [-1,1]){const riverPoint=river.sample(d);for(let row=0;row<3;row++){
   const width=18+random()*24,depth=20+random()*23,offset=side*(riverPoint.width/2+depth/2+12+row*110),p=river.sample(d+(random()-.5)*14,offset);let height=11+random()*25;
   if(row>0)height+=random()*45;if(d>river.length*.62&&random()>.72)height+=random()*90;const oldTown=d<river.length*.48;if(oldTown)height=6+random()*13+row*4;if(row===0&&oldTown)height=9+random()*4;
   if(landmarks.some(l=>l.side===side&&Math.abs(d-l.distance)<l.reserveLength&&Math.abs(offset)<l.inland))continue;
   if(landmarks.some(l=>p.x>l.bounds.min.x-25&&p.x<l.bounds.max.x+25&&p.z>l.bounds.min.z-25&&p.z<l.bounds.max.z+25))continue;
-  const fm=row===0&&height<22?shophouse:mats[Math.floor(random()*5)][height<22?0:height<65?1:2];batch.box(fm,p.x,3+height/2,p.z,width,height,depth,p.heading);
+  const fm=row===0&&height<22&&Math.floor(d/35)%5!==0?shophouse:mats[Math.floor(random()*5)][height<22?0:height<65?1:2];batch.box(fm,p.x,3+height/2,p.z,width,height,depth,p.heading);
   batch.box(roof,p.x,height+3.5,p.z,width+1,1,depth+1,p.heading);
+  if(row>0){batch.box(roof,p.x,height+5.5,p.z,width*.3,4,depth*.4,p.heading);if(height>65)batch.box(glow,p.x,height+8,p.z,.35,.45,.35);}
+  if(row===0){const facing=river.sample(d,side*(riverPoint.width/2+depth+17));for(let ac=0;ac<2;ac++)batch.box(stone,facing.x+ac*3,7+ac*3,facing.z,1.5,1.1,.8,p.heading);}
   if(row===0){const f=river.sample(d,side*(riverPoint.width/2+5));batch.box(market,f.x,6.7,f.z,width,.3,4,p.heading);if(Math.floor(d)%3===0)batch.box(glow,f.x,6.9,f.z,width*.3,.08,.24,p.heading);}
  }}
  for(const side of[-1,1]){const p=river.sample(d,side*(river.sample(d).width/2+4));batch.box(stone,p.x,1.5,p.z,2,3.5,36,p.heading);if(Math.floor(d/35)%2===0){batch.box(rail,p.x,6,p.z,.35,7,.35);batch.box(glow,p.x,9.7,p.z,1.9,.35,1.9);}
@@ -81,9 +94,15 @@ export function createWorld(scene,river,piers,mobile){
   }
   for(const x of[-n.width*.27,n.width*.27]){b.box(steel,x,h/2,0,8,h,13);const v=new THREE.Vector3(x,0,0).applyMatrix4(g.matrixWorld);g.updateMatrixWorld();g.localToWorld(v.set(x,0,0));bridgeColliders.push({x:v.x,z:v.z,width:9,length:16,heading:g.rotation.y,mass:10000,vx:0,vz:0});}
   if(type==='concrete'){b.box(steel,0,h+4,0,span,2,6);b.box(glow,0,h+5.1,0,span,.1,5.4);}b.finish(g);
-  const label=sign(name,54,4.8);label.position.set(0,h+3.8,type==='steel'?9:15);g.add(label);bridgeGroups.push(g);
+  const label=sign(name,54,4.8);label.position.set(0,h+3.8,type==='steel'?9:15);g.add(label);bridgeGroups.push({group:g,span,height:h});
  }
  bridge(13.7393,100.4976,'MEMORIAL BRIDGE','steel');bridge(13.73898,100.49851,'CHAO PHRAYA SKY PARK','concrete');bridge(13.7193,100.5121,'TAKSIN BRIDGE','concrete');
+ const movingCars=new THREE.Group();scene.add(movingCars);const carBody=M(0x303842),carHead=new THREE.MeshBasicMaterial({color:new THREE.Color(0xffe2b5).multiplyScalar(2.2)}),carTail=new THREE.MeshBasicMaterial({color:new THREE.Color(0xff2712).multiplyScalar(1.9)});
+ const carCount=bridgeGroups.length*10,carMeshes=[new THREE.InstancedMesh(unitBox,carBody,carCount),new THREE.InstancedMesh(unitBox,carHead,carCount*2),new THREE.InstancedMesh(unitBox,carTail,carCount*2)];carMeshes.forEach(m=>{m.instanceMatrix.setUsage(THREE.DynamicDrawUsage);m.frustumCulled=false;movingCars.add(m);});const carTransform=new THREE.Object3D();
+ function updateBridgeTraffic(time){for(let i=0;i<carCount;i++){const {group,span,height}=bridgeGroups[Math.floor(i/10)],dir=i%2?1:-1,x=(((i%10)*53+time*(7+i%4)*dir)%(span+60)+span+60)%(span+60)-(span+60)/2,lane=dir*5;
+  const set=(mesh,index,px,py,pz,sx,sy,sz)=>{carTransform.position.set(px,py,pz);carTransform.rotation.set(0,0,0);carTransform.scale.set(sx,sy,sz);carTransform.updateMatrix();carTransform.matrix.premultiply(group.matrixWorld);mesh.setMatrixAt(index,carTransform.matrix);};
+  group.updateMatrixWorld();set(carMeshes[0],i,x,height+2.3,lane,4,1.25,1.65);for(let side=0;side<2;side++){set(carMeshes[1],i*2+side,x+dir*2.04,height+2.25,lane+(side-.5)*1.2,.07,.22,.28);set(carMeshes[2],i*2+side,x-dir*2.04,height+2.25,lane+(side-.5)*1.2,.07,.2,.3);}
+ }carMeshes.forEach(m=>m.instanceMatrix.needsUpdate=true);}
  const limits=new Batch(),buoy=M(0xb62e28,0xff572d,.35);for(const distance of[2,river.length-2]){const p=river.sample(distance);for(let offset=-p.width*.43;offset<=p.width*.43;offset+=p.width/7){const q=river.sample(distance,offset);limits.add(new THREE.SphereGeometry(1.05,8,6),buoy,q.x,.55,q.z,1,.9,1);limits.box(glow,q.x,1.7,q.z,.25,.6,.25);}const marker=sign('RIVER LIMIT · TURN BACK',27,3,'#18313b','#ffd290');marker.position.set(p.x,6,p.z);marker.rotation.y=p.heading;scene.add(marker);}limits.finish(scene);
  const pierVisuals=[];
  for(const p of piers){const g=new THREE.Group();g.position.set(p.x,0,p.z);const b=new Batch(),heading=Math.atan2(p.nx,p.nz);g.rotation.y=heading;
@@ -97,8 +116,11 @@ export function createWorld(scene,river,piers,mobile){
   const ring=new THREE.Mesh(new THREE.RingGeometry(17.5,18.3,64),new THREE.MeshBasicMaterial({color:0xffbd66,transparent:true,opacity:.8,side:THREE.DoubleSide,depthWrite:false,toneMapped:false}));ring.rotation.x=-Math.PI/2;ring.position.set(p.x,.18,p.z);scene.add(ring);
   const beacon=sign('PICK UP',13,2.8,'#163237','#ffd995');beacon.position.set(p.x,9,p.z);scene.add(beacon);pierVisuals.push({pier:p,ring,beacon});
  }
- // A warm, atmospheric night sky. Few stars remain visible above urban haze.
- const skyMat=new THREE.ShaderMaterial({side:THREE.BackSide,depthWrite:false,uniforms:{time:{value:0}},vertexShader:'varying vec3 v;void main(){v=position;gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.0);}',fragmentShader:`varying vec3 v;uniform float time;void main(){vec3 d=normalize(v);float h=max(d.y,0.);vec3 c=mix(vec3(.041,.062,.096),vec3(.006,.016,.038),pow(h,.36));float haze=pow(1.-h,9.);c+=vec3(.023,.012,.008)*haze;float veil=sin(d.x*8.+d.z*3.)*.5+.5;c+=vec3(.004,.005,.007)*veil*smoothstep(.01,.12,d.y)*(1.-smoothstep(.14,.4,d.y));gl_FragColor=vec4(c,1.);}`});
- const sky=new THREE.Mesh(new THREE.SphereGeometry(6500,32,16),skyMat);scene.add(sky);const moon=new THREE.Mesh(new THREE.SphereGeometry(28,24,16),new THREE.MeshBasicMaterial({color:0xdce5ed,fog:false}));moon.position.set(-2100,2700,-3700);scene.add(moon);
- return {water,landmarks,pierVisuals,bridgeColliders,sky,update(time,camera,shift){water.material.uniforms.time.value=time*.48;skyMat.uniforms.time.value=time;for(const v of pierVisuals){const active=shift.fare?shift.fare.to.id===v.pier.id:!shift.finished&&(shift.cooldowns.get(v.pier.id)||0)<=shift.clock;v.ring.visible=v.beacon.visible=active;if(active){v.ring.material.color.set(shift.fare?0x89f2cf:0xffbd66);v.ring.material.opacity=.55+Math.sin(time*3)*.15;v.beacon.quaternion.copy(camera.quaternion);v.beacon.visible=camera.position.distanceTo(v.beacon.position)<550;v.beacon.position.y=9+Math.sin(time*2)*.6;}}}};
+ const nightSky=createNightSky(scene),sky=nightSky.sky;
+ const riverfront=createRiverfront(scene,river,landmarks,mobile),fountains=createFountains(scene,river,landmarks,mobile);
+ const localLights=Array.from({length:mobile?3:5},()=>{const l=new THREE.PointLight(0xffc17c,0,46,2);scene.add(l);return l;});
+ return {water,landmarks,pierVisuals,bridgeColliders,sky,update(time,camera,shift,boatLights=[]){nightSky.update(time);updateBridgeTraffic(time);riverfront.update(time,camera);fountains.update(time);const lightSources=[...riverfront.lights,...fountains.lights,...boatLights];nightWater.update(time,camera,lightSources);
+ const nearby=lightSources.map(s=>({s,d:(s.x-camera.position.x)**2+(s.z-camera.position.z)**2})).sort((a,b)=>a.d-b.d);
+ for(let i=0;i<localLights.length;i++){const s=nearby[i]?.s,l=localLights[i];l.intensity=s?Math.min(100,s.power*(s.boat?.48:1.9)):0;if(s){l.position.set(s.x,s.y,s.z);l.color.set(s.color);l.distance=s.distance||46;}}
+for(const v of pierVisuals){const active=shift.fare?shift.fare.to.id===v.pier.id:!shift.finished&&(shift.cooldowns.get(v.pier.id)||0)<=shift.clock;v.ring.visible=v.beacon.visible=active;if(active){v.ring.material.color.set(shift.fare?0x89f2cf:0xffbd66);v.ring.material.opacity=.55+Math.sin(time*3)*.15;v.beacon.quaternion.copy(camera.quaternion);v.beacon.visible=camera.position.distanceTo(v.beacon.position)<550;v.beacon.position.y=9+Math.sin(time*2)*.6;}}}};
 }

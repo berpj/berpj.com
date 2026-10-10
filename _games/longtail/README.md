@@ -31,14 +31,17 @@ Scores use `bangkok-longtail:scores:v1` in localStorage, separate from Tuk Tuk. 
 
 - `src/simulation.mjs`: fixed-step water handling, hull capsule contacts, mass-dependent impacts, fare timers, tip combos, records. Pure functions/classes tested with Node.
 - `src/river.mjs`: local metre projection, centreline sampling, bank/end-cap collisions and boarding berths.
-- `src/world.js`: reflective water, night atmosphere, shore blocks, piers, three bridges and authored landmark placement.
+- `src/world.js`: shore blocks, piers, three bridges with moving traffic, pooled local lighting and authored landmark placement.
+- `src/night.js`: camera-independent clouded night sky, multiscale river ripples, live reflections and lamp glints. The sky projects at far depth so the horizon cannot be clipped by the camera.
+- `src/riverfront.js`: restaurant terraces, Thai signage, festoon lights and instanced animated pedestrians.
+- `src/fountains.js`: animated illuminated water jets at ICONSIAM.
 - `src/landmarks.js`: merged architectural landmark meshes.
 - `src/boats.js`: curved wooden long-tail and four distinct river traffic classes.
 - `src/effects.js`: pooled wake/spray particles.
 - `src/audio.js`: full-length licensed music, engine/horn/water/game audio and independent music/master mute.
 - `src/main.js`: keyboard/touch/gamepad, interpolated chase camera, traffic, UI, minimap and session transitions.
 
-Reflections render at 512 px desktop / 256 px mobile, pixel ratio is capped, static geometry is merged, and traffic is reduced on mobile. Dynamic whole-scene shadows are avoided for browser performance.
+Reflections render at 1024 px desktop / 512 px mobile, pixel ratio is capped, static geometry is merged, and traffic is reduced on mobile. Dynamic whole-scene shadows are avoided for browser performance. Shore and vessel lights use a fixed pool (five desktop, three mobile); crowds, bridge cars and fountain droplets use batched or instanced geometry.
 
 ## Geographic and asset scope
 
