@@ -8,6 +8,7 @@ import {OutputPass} from 'three/addons/postprocessing/OutputPass.js';
 import {River,buildPiers,clamp,angleDelta} from './river.mjs';
 import {BoatPhysics,Shift,collide,capsuleContact,directBearing,cleanScores,saveScore,RECORD_KEY} from './simulation.mjs';
 import {createWorld} from './world.js';
+import {MOON_DIRECTION} from './night.js';
 import {createBoat,boatSpecs} from './boats.js';
 import {createCargoBoat,cargoSpecs} from './cargo.js';
 import {createFleet,advanceFleet} from './traffic.mjs';
@@ -115,7 +116,7 @@ async function init(){try{
  const source=data.points,curve=new THREE.CatmullRomCurve3(source.map(p=>{const lat=13.733,lon=100.502;return new THREE.Vector3((p[0]-lon)*108140,0,(lat-p[1])*111320);}));const sampled=curve.getSpacedPoints(320),raw=new River(source),points=sampled.map(p=>[p.x/108140+100.502,13.733-p.z/111320,raw.nearest(p.x,p.z).width]);
  river=new River(points);piers=buildPiers(river);shift=new Shift(piers);boat=new BoatPhysics(piers[0].x,piers[0].z,piers[0].heading);scene=new THREE.Scene();scene.background=new THREE.Color(0x0a101b);scene.fog=new THREE.FogExp2(0x11141c,.00056);camera=new THREE.PerspectiveCamera(62,innerWidth/innerHeight,.3,8000);camera.layers.enable(1);
  renderer=new THREE.WebGLRenderer({canvas:$('#scene'),antialias:false,powerPreference:'high-performance'});renderBudget=new RenderBudget(devicePixelRatio,mobile);renderer.setPixelRatio(renderBudget.ratio);renderer.setSize(innerWidth,innerHeight);renderer.toneMapping=THREE.ACESFilmicToneMapping;renderer.toneMappingExposure=.98;renderer.outputColorSpace=THREE.SRGBColorSpace;
- scene.add(new THREE.HemisphereLight(0xa4bcd6,0x4a3e32,.40));const moon=new THREE.DirectionalLight(0x9cbce2,.44);moon.position.set(-300,600,-400);scene.add(moon);const shore=new THREE.DirectionalLight(0xffd49c,.12);shore.position.set(500,220,150);scene.add(shore);
+ scene.add(new THREE.HemisphereLight(0xa4bcd6,0x4a3e32,.53));const moon=new THREE.DirectionalLight(0x9cbce2,.48);moon.position.copy(MOON_DIRECTION).multiplyScalar(1000);scene.add(moon);const shore=new THREE.DirectionalLight(0xffd49c,.12);shore.position.set(500,220,150);scene.add(shore);
  world=createWorld(scene,river,piers,mobile);player=createBoat('longtail',0);scene.add(player);const engineLamp=new THREE.PointLight(0xffc991,3.5,7,2);engineLamp.position.set(0,1.65,4.5);player.add(engineLamp);wake=new Wake(scene,mobile);surfaceWakes=new SurfaceWakes(scene,mobile?30:46);makeTraffic();simplifyBoatReflections(world.water,traffic);
  composer=new EffectComposer(renderer);composer.addPass(new RenderPass(scene,camera));composer.addPass(createNightBloom(innerWidth,innerHeight));if(!mobile){smaa=new SMAAPass();composer.addPass(smaa);}composer.addPass(new OutputPass());fxaa=new FXAAPass();fxaa.enabled=mobile;composer.addPass(fxaa);
  const resize=()=>{stillFrame=false;camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight);composer.setSize(innerWidth,innerHeight);};window.addEventListener('resize',resize);$('#scene').addEventListener('webglcontextlost',e=>{e.preventDefault();togglePause(true);toast('Graphics paused. Reload the page to restore the river.',100);});

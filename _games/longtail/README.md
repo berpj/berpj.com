@@ -32,7 +32,7 @@ Scores use `bangkok-longtail:scores:v1` in localStorage, separate from Tuk Tuk. 
 - `src/simulation.mjs`: fixed-step water handling, hull capsule contacts, mass-dependent impacts, fare timers, tip combos, records. Pure functions/classes tested with Node.
 - `src/river.mjs`: local metre projection, centreline sampling, bank/end-cap collisions and boarding berths.
 - `src/world.js`: shore blocks, piers, three bridges with moving traffic, pooled local lighting and authored landmark placement.
-- `src/night.js`: camera-independent clouded night sky, multiscale river ripples, live reflections and lamp glints. The sky projects at far depth so the horizon cannot be clipped by the camera.
+- `src/night.js`: camera-independent clouded night sky with a softly textured moon, multiscale river ripples, live reflections and lamp glints. Moon, directional illumination and water highlights share the same bearing. The sky projects at far depth so the horizon cannot be clipped by the camera.
 - `src/riverfront.js`: restaurant terraces, Thai signage, festoon lights and instanced animated pedestrians.
 - `src/fountains.js`: animated illuminated water jets at ICONSIAM.
 - `src/landmarks.js`: merged architectural landmark meshes.

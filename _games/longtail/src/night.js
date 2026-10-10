@@ -1,24 +1,28 @@
 import * as THREE from 'three';
 import { Water } from 'three/addons/objects/Water.js';
 
+// Low in the southern sky, visible along the main downstream approach.
+// Share the direction with hull lighting and the moonlit water highlights.
+export const MOON_DIRECTION = new THREE.Vector3(.30,.26,.918).normalize();
+
 // The sky is drawn at far depth using only camera rotation. A world-centred
 // sphere used to cross the far plane from the northern end of the river.
 export function createNightSky(scene) {
   const material = new THREE.ShaderMaterial({
     side: THREE.BackSide, depthWrite: false, depthTest: false,
-    uniforms: { time: { value: 0 } },
+    uniforms: { time: { value: 0 }, moonDirection: { value: MOON_DIRECTION.clone() } },
     vertexShader: `varying vec3 direction;
       void main(){direction=position;vec4 p=projectionMatrix*mat4(mat3(viewMatrix))*vec4(position,1.);gl_Position=p.xyww;}`,
-    fragmentShader: `varying vec3 direction;uniform float time;
+    fragmentShader: `varying vec3 direction;uniform float time;uniform vec3 moonDirection;
       float hash(vec2 p){return fract(sin(dot(p,vec2(127.1,311.7)))*43758.5453);}
       float noise(vec2 p){vec2 i=floor(p),f=fract(p);f=f*f*(3.-2.*f);
         return mix(mix(hash(i),hash(i+vec2(1,0)),f.x),mix(hash(i+vec2(0,1)),hash(i+vec2(1,1)),f.x),f.y);}
       float fbm(vec2 p){float n=0.,a=.53;for(int i=0;i<4;i++){n+=noise(p)*a;p=mat2(1.6,1.2,-1.2,1.6)*p+17.7;a*=.5;}return n;}
       void main(){
         vec3 d=normalize(direction);float h=max(d.y,0.);
-        vec3 moonDir=normalize(vec3(-.43,.54,-.72));float moonDot=max(0.,dot(d,moonDir));
+        float moonDot=max(0.,dot(d,moonDirection));
         float horizon=exp(-h*8.);
-        vec3 color=mix(vec3(.006,.011,.021),vec3(.033,.028,.030),horizon);
+        vec3 color=mix(vec3(.008,.014,.025),vec3(.037,.031,.033),horizon);
         color+=vec3(.012,.006,.002)*pow(horizon,3.);
         vec2 p=d.xz/(max(.10,d.y)+.20)*1.5+vec2(time*.0018,0.);
         float cloud=fbm(p+fbm(p*.57)*1.7);
@@ -26,8 +30,21 @@ export function createNightSky(scene) {
         vec3 cloudColor=mix(vec3(.020,.026,.036),vec3(.042,.036,.034),horizon);
         cloudColor+=vec3(.013,.018,.027)*pow(moonDot,24.);
         color=mix(color,cloudColor,veil*.76);
-        float halo=pow(moonDot,180.);float disk=smoothstep(.99988,.99996,moonDot);
-        color+=(vec3(.055,.068,.09)*halo+vec3(.74,.80,.91)*disk)*(1.-veil*.82);
+        float halo=pow(moonDot,180.);
+        color+=vec3(.045,.057,.078)*halo*(1.-veil*.68);
+        vec3 moonRight=normalize(cross(vec3(0.,1.,0.),moonDirection));
+        vec3 moonUp=cross(moonDirection,moonRight);
+        vec2 lunarUV=vec2(dot(d,moonRight),dot(d,moonUp))/.022;
+        float radial=length(lunarUV),edge=max(fwidth(radial),.002);
+        if(moonDot>.998&&radial<1.+edge){
+          // Broad lunar maria and fine craters, shaded softly toward the limb.
+          float maria=smoothstep(.28,.72,fbm(lunarUV*3.8+vec2(12.3,5.7)));
+          float craters=fbm(lunarUV*19.+vec2(31.7,8.2));
+          float limb=sqrt(max(0.,1.-dot(lunarUV,lunarUV)));
+          vec3 moonColor=vec3(1.18,1.13,1.02)*(.52+.31*maria+.13*craters)*(.73+.27*limb);
+          float disk=1.-smoothstep(1.-edge,1.+edge,radial);
+          color=mix(color,moonColor,disk*(1.-veil*.58));
+        }
         gl_FragColor=vec4(color,1.);
         #include <tonemapping_fragment>
         #include <colorspace_fragment>
@@ -65,7 +82,7 @@ export function createNightWater(scene,mobile){
   geometry.computeBoundingSphere();
   const water=new Water(geometry,{
     textureWidth:mobile?256:512,textureHeight:mobile?256:512,
-    waterNormals:riverNormals(),sunDirection:new THREE.Vector3(-.43,.54,-.72).normalize(),
+    waterNormals:riverNormals(),sunDirection:MOON_DIRECTION.clone(),
     sunColor:0x728496,waterColor:0x051815,distortionScale:1.8,fog:true,clipBias:.002
   });
   water.rotation.x=-Math.PI/2;water.position.y=.04;water.name='chao-phraya-water';
