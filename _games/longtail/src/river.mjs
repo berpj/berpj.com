@@ -12,7 +12,9 @@ export class River{
   this.segments=this.points.slice(1).map((b,i)=>{const a=this.points[i],dx=b.x-a.x,dz=b.z-a.z,len=Math.hypot(dx,dz);const s={a,b,dx,dz,len,start:this.length};this.length+=len;return s;});
  }
  sample(distance,offset=0){
-  const d=clamp(distance,0,this.length),s=this.segments.find(s=>s.start+s.len>=d)||this.segments.at(-1),t=clamp((d-s.start)/s.len,0,1),nx=-s.dz/s.len,nz=s.dx/s.len;
+  const d=clamp(distance,0,this.length);let low=0,high=this.segments.length-1;
+  while(low<high){const mid=(low+high)>>1,s=this.segments[mid];if(s.start+s.len<d)low=mid+1;else high=mid;}
+  const s=this.segments[low],t=clamp((d-s.start)/s.len,0,1),nx=-s.dz/s.len,nz=s.dx/s.len;
   return {x:lerp(s.a.x,s.b.x,t)+nx*offset,z:lerp(s.a.z,s.b.z,t)+nz*offset,heading:Math.atan2(-s.dx,-s.dz),nx,nz,width:lerp(s.a.width,s.b.width,t),distance:d};
  }
  nearest(x,z){

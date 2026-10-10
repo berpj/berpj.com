@@ -84,7 +84,7 @@ export function createWorld(scene,river,piers,mobile){
  for(const side of[-1,1]){const p=river.sample(d,side*(river.sample(d).width/2+4));batch.box(stone,p.x,1.5,p.z,2,3.5,36,p.heading);if(Math.floor(d/35)%2===0){batch.box(rail,p.x,6,p.z,.35,7,.35);batch.box(glow,p.x,9.7,p.z,1.9,.35,1.9);}
  if(Math.floor(d/35)%3===0){batch.box(trunk,p.x+p.nx*side*8,7,p.z+p.nz*side*8,.8,9,.8);const pos={x:p.x+p.nx*side*8,z:p.z+p.nz*side*8};for(let a=0;a<5;a++)batch.add(new THREE.SphereGeometry(1,7,5),leaf,pos.x+Math.sin(a*1.25)*2.3,11.5,pos.z+Math.cos(a*1.25)*2.3,4.1,1.8,2.2,a*1.25);}}
  }
- batch.finish(buildings);
+ batch.finish(buildings);buildings.traverse(o=>{o.updateMatrix();o.matrixAutoUpdate=false;});
  // Recognisable steel Memorial Bridge, neighbouring Sky Park and concrete Taksin.
  const bridgeColliders=[];const bridgeGroups=[];
  function bridge(lat,lon,name,type){
@@ -99,7 +99,8 @@ export function createWorld(scene,river,piers,mobile){
  bridge(13.7393,100.4976,'MEMORIAL BRIDGE','steel');bridge(13.73898,100.49851,'CHAO PHRAYA SKY PARK','concrete');bridge(13.7193,100.5121,'TAKSIN BRIDGE','concrete');
  const movingCars=new THREE.Group();scene.add(movingCars);const carBody=M(0x303842),carHead=new THREE.MeshBasicMaterial({color:new THREE.Color(0xffe2b5).multiplyScalar(2.2)}),carTail=new THREE.MeshBasicMaterial({color:new THREE.Color(0xff2712).multiplyScalar(1.9)});
  const carCount=bridgeGroups.length*10,carMeshes=[new THREE.InstancedMesh(unitBox,carBody,carCount),new THREE.InstancedMesh(unitBox,carHead,carCount*2),new THREE.InstancedMesh(unitBox,carTail,carCount*2)];carMeshes.forEach(m=>{m.instanceMatrix.setUsage(THREE.DynamicDrawUsage);m.frustumCulled=false;movingCars.add(m);});const carTransform=new THREE.Object3D();
- function updateBridgeTraffic(time){for(let i=0;i<carCount;i++){const {group,span,height}=bridgeGroups[Math.floor(i/10)],dir=i%2?1:-1,x=(((i%10)*53+time*(7+i%4)*dir)%(span+60)+span+60)%(span+60)-(span+60)/2,lane=dir*5;
+ let lastCarUpdate=-1;
+ function updateBridgeTraffic(time){if(time-lastCarUpdate<1/30)return;lastCarUpdate=time;for(let i=0;i<carCount;i++){const {group,span,height}=bridgeGroups[Math.floor(i/10)],dir=i%2?1:-1,x=(((i%10)*53+time*(7+i%4)*dir)%(span+60)+span+60)%(span+60)-(span+60)/2,lane=dir*5;
   const set=(mesh,index,px,py,pz,sx,sy,sz)=>{carTransform.position.set(px,py,pz);carTransform.rotation.set(0,0,0);carTransform.scale.set(sx,sy,sz);carTransform.updateMatrix();carTransform.matrix.premultiply(group.matrixWorld);mesh.setMatrixAt(index,carTransform.matrix);};
   group.updateMatrixWorld();set(carMeshes[0],i,x,height+2.3,lane,4,1.25,1.65);for(let side=0;side<2;side++){set(carMeshes[1],i*2+side,x+dir*2.04,height+2.25,lane+(side-.5)*1.2,.07,.22,.28);set(carMeshes[2],i*2+side,x-dir*2.04,height+2.25,lane+(side-.5)*1.2,.07,.2,.3);}
  }carMeshes.forEach(m=>m.instanceMatrix.needsUpdate=true);}
@@ -118,8 +119,8 @@ export function createWorld(scene,river,piers,mobile){
  }
  const nightSky=createNightSky(scene),sky=nightSky.sky;
  const riverfront=createRiverfront(scene,river,landmarks,mobile),fountains=createFountains(scene,river,landmarks,mobile);
- const localLights=Array.from({length:mobile?3:5},()=>{const l=new THREE.PointLight(0xffc17c,0,46,2);scene.add(l);return l;});
- return {water,landmarks,pierVisuals,bridgeColliders,sky,update(time,camera,shift,boatLights=[]){nightSky.update(time);updateBridgeTraffic(time);riverfront.update(time,camera);fountains.update(time);const lightSources=[...riverfront.lights,...fountains.lights,...boatLights];nightWater.update(time,camera,lightSources);
+ const localLights=Array.from({length:mobile?2:3},()=>{const l=new THREE.PointLight(0xffc17c,0,46,2);scene.add(l);return l;});
+ return {water,landmarks,pierVisuals,bridgeColliders,sky,update(time,camera,shift,boatLights=[]){nightSky.update(time);updateBridgeTraffic(time);riverfront.update(time,camera);fountains.update(time,camera);const lightSources=[...riverfront.lights,...fountains.lights,...boatLights];nightWater.update(time,camera,lightSources);
  const nearby=lightSources.map(s=>({s,d:(s.x-camera.position.x)**2+(s.z-camera.position.z)**2})).sort((a,b)=>a.d-b.d);
  for(let i=0;i<localLights.length;i++){const s=nearby[i]?.s,l=localLights[i];l.intensity=s?Math.min(100,s.power*(s.boat?.48:1.9)):0;if(s){l.position.set(s.x,s.y,s.z);l.color.set(s.color);l.distance=s.distance||46;}}
 for(const v of pierVisuals){const active=shift.fare?shift.fare.to.id===v.pier.id:!shift.finished&&(shift.cooldowns.get(v.pier.id)||0)<=shift.clock;v.ring.visible=v.beacon.visible=active;if(active){v.ring.material.color.set(shift.fare?0x89f2cf:0xffbd66);v.ring.material.opacity=.55+Math.sin(time*3)*.15;v.beacon.quaternion.copy(camera.quaternion);v.beacon.visible=camera.position.distanceTo(v.beacon.position)<550;v.beacon.position.y=9+Math.sin(time*2)*.6;}}}};

@@ -1,5 +1,5 @@
 import {clamp,angleDelta} from './river.mjs';
-export const TUNING=Object.freeze({speed:28,boostSpeed:43,acceleration:10.8,boostAcceleration:19,brake:32,reverseSpeed:7,reverseAcceleration:9,steer:1.27,boostSteer:.6});
+export const TUNING=Object.freeze({speed:34,boostSpeed:53,acceleration:13.8,boostAcceleration:24,brake:41,reverseSpeed:7,reverseAcceleration:9,steer:1.27,boostSteer:.6});
 export class BoatPhysics{
  constructor(x=0,z=0,heading=0){this.reset(x,z,heading);}
  reset(x,z,heading){Object.assign(this,{x,z,heading,vx:0,vz:0,yaw:0,speed:0,slip:0,boosting:false,drifting:false,brakeHold:0});}

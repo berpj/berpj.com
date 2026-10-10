@@ -37,11 +37,20 @@ Scores use `bangkok-longtail:scores:v1` in localStorage, separate from Tuk Tuk. 
 - `src/fountains.js`: animated illuminated water jets at ICONSIAM.
 - `src/landmarks.js`: merged architectural landmark meshes.
 - `src/boats.js`: curved wooden long-tail and four distinct river traffic classes.
+- `src/cargo.js`: low-draw-call tugboats and covered cargo barges with towing hardware.
+- `src/traffic.mjs`: denser traffic, speed following and articulated three/four-barge convoys. Every hull has its own collision capsule; tow gaps remain open.
+- `src/traffic-visuals.js`: shared near models and inexpensive distant boat silhouettes.
+- `src/render-budget.mjs`: gradual pixel-density adaptation with warmup and hysteresis.
+- `src/reflections.js`: lower-detail boat geometry used only inside the reflection pass.
 - `src/effects.js`: pooled wake/spray particles.
 - `src/audio.js`: full-length licensed music, engine/horn/water/game audio and independent music/master mute.
 - `src/main.js`: keyboard/touch/gamepad, interpolated chase camera, traffic, UI, minimap and session transitions.
 
-Reflections render at 1024 px desktop / 512 px mobile, pixel ratio is capped, static geometry is merged, and traffic is reduced on mobile. Dynamic whole-scene shadows are avoided for browser performance. Shore and vessel lights use a fixed pool (five desktop, three mobile); crowds, bridge cars and fountain droplets use batched or instanced geometry.
+The fleet has 77 hulls on desktop and 53 on mobile, including tug-led strings of three or four cargo barges. Player cruise/boost caps are 34/53 m/s; ordinary traffic runs 14% faster, while loaded convoys stay below 3.2 m/s. Braking scales with the faster player boat. Boost has no screen-glow overlay.
+
+SMAA runs before tone mapping on desktop, and FXAA runs after tone mapping on mobile or under sustained GPU pressure. Antialiasing stays enabled in both modes. Reflections render at 512 px desktop / 256 px mobile using boat silhouettes, with small particles and pedestrians excluded. Pixel density adapts gradually to sustained frame-rate pressure without changing traffic or physics. Static geometry and repeated signs are merged; nearby boat detail is retained at 220 m desktop / 160 m mobile. Shore and vessel lights use a fixed pool (three desktop, two mobile); secondary animations update at 24-30 Hz. Pausing stops repeated scene renders.
+
+For local rendering measurements, open `/longtail/?stats` on the Vite dev server. The visible readout includes every reflection and postprocessing draw. It is removed from production builds.
 
 ## Geographic and asset scope
 

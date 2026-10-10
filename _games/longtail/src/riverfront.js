@@ -14,12 +14,14 @@ class ShoreBatch{
  finish(parent){for(const[m,parts]of this.parts){const geometry=mergeGeometries(parts);parts.forEach(p=>p.dispose());const mesh=new THREE.Mesh(geometry,m);parent.add(mesh);}this.parts.clear();}
 }
 
+const venueMaterials=new Map(),venueGeometry=new THREE.PlaneGeometry(9,2.25);
 function venueSign(text,index){
+ const key=`${text}:${index%3}`;if(venueMaterials.has(key))return new THREE.Mesh(venueGeometry,venueMaterials.get(key));
  const c=document.createElement('canvas');c.width=512;c.height=128;const ctx=c.getContext('2d');
  ctx.fillStyle='#090e13';ctx.fillRect(0,0,512,128);ctx.strokeStyle=['#dea353','#6ecfc1','#dd7160'][index%3];ctx.lineWidth=3;ctx.strokeRect(8,8,496,112);
  ctx.font='600 54px Arial';ctx.textAlign='center';ctx.textBaseline='middle';ctx.shadowColor=ctx.strokeStyle;ctx.shadowBlur=8;ctx.fillStyle=ctx.strokeStyle;ctx.fillText(text,256,66,466);
  const texture=new THREE.CanvasTexture(c);texture.colorSpace=THREE.SRGBColorSpace;
- return new THREE.Mesh(new THREE.PlaneGeometry(9,2.25),new THREE.MeshStandardMaterial({map:texture,emissiveMap:texture,emissive:0xffffff,emissiveIntensity:2.1,roughness:.85}));
+ const m=new THREE.MeshStandardMaterial({map:texture,emissiveMap:texture,emissive:0xffffff,emissiveIntensity:2.1,roughness:.85});venueMaterials.set(key,m);return new THREE.Mesh(venueGeometry,m);
 }
 
 export function createRiverfront(scene,river,landmarks,mobile){
@@ -49,7 +51,7 @@ export function createRiverfront(scene,river,landmarks,mobile){
     batch.add(sphere,warm,...point(table,4.35,2.2),.10,.16,.10);
     for(const s of[-1,1]){batch.box(wood,...point(table+s*1.3,3.75,2.2),.55,.12,.6,heading);batch.box(wood,...point(table+s*1.45,4.07,2.2),.12,.65,.6,heading);}
    }
-   const banner=venueSign(['ริมน้ำ','SEAFOOD','ก๋วยเตี๋ยว','RIVER BAR','อาหารไทย','ท่าเรือ'][k%6],k);banner.position.set(...point(0,7.1,2.15));banner.rotation.y=heading;staticGroup.add(banner);
+   const banner=venueSign(['ริมน้ำ','SEAFOOD','ก๋วยเตี๋ยว','RIVER BAR','อาหารไทย','ท่าเรือ'][k%6],k);batch.add(banner.geometry,banner.material,...point(0,7.1,2.15),1,1,1,heading);
    const a=point(-11,7.4,.6),b=point(11,7.4,.6);for(let i=0;i<12;i++){const f=i/11,g=(i+1)/11,pa=[a[0]+(b[0]-a[0])*f,7.4-Math.sin(f*Math.PI)*.75,a[2]+(b[2]-a[2])*f],pb=[a[0]+(b[0]-a[0])*g,7.4-Math.sin(g*Math.PI)*.75,a[2]+(b[2]-a[2])*g];if(i<11)batch.line(metal,pa,pb,.023);batch.add(sphere,tint,pa[0],pa[1]-.14,pa[2],.11,.16,.11);}
    const lamp=point(0,6,1);lights.push({x:lamp[0],y:lamp[1],z:lamp[2],color:lamps[k%4],power:35});
   }else{
@@ -62,12 +64,12 @@ export function createRiverfront(scene,river,landmarks,mobile){
    if(k%3===0){for(let n=0;n<3;n++)batch.box(wood,...point(16+n*.9,3.6+n*.2,5),.85,.8,.85,heading);}
   }
  }}
- batch.finish(staticGroup);
+ batch.finish(staticGroup);staticGroup.traverse(o=>{o.updateMatrix();o.matrixAutoUpdate=false;});
 
  // Animated pedestrians and seated diners are instanced, not separate draw calls.
  const crowdCount=mobile?64:132,people=[],personParts=[];
  const skin=material(0xae8769),shirts=material(0xaaa8a0),trousers=material(0x192426),hair=material(0x111410);
- const addPart=(g,m,kind)=>{const mesh=new THREE.InstancedMesh(g,m,crowdCount);mesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);mesh.frustumCulled=false;scene.add(mesh);personParts.push({mesh,kind});};
+ const addPart=(g,m,kind)=>{const mesh=new THREE.InstancedMesh(g,m,crowdCount);mesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);mesh.frustumCulled=false;mesh.layers.set(1);scene.add(mesh);personParts.push({mesh,kind});};
  addPart(new THREE.CapsuleGeometry(.22,.49,3,7),shirts,'body');addPart(new THREE.SphereGeometry(.17,8,7),skin,'head');addPart(new THREE.SphereGeometry(.174,8,6),hair,'hair');
  for(const side of[-1,1]){addPart(new THREE.CapsuleGeometry(.075,.58,2,5),trousers,side<0?'left-leg':'right-leg');addPart(new THREE.CapsuleGeometry(.062,.46,2,5),shirts,side<0?'left-arm':'right-arm');}
  const colors=[0xe6c090,0x729a99,0xc17660,0xc0bcaa,0x535770,0xa89475];
@@ -90,5 +92,6 @@ export function createRiverfront(scene,river,landmarks,mobile){
   }
  }for(const part of personParts)part.mesh.instanceMatrix.needsUpdate=true;};
  updatePeople(0);
- return {lights,update(time){updatePeople(time);}};
+ let lastPeopleUpdate=-1;
+ return {lights,update(time){if(time-lastPeopleUpdate<1/24)return;lastPeopleUpdate=time;updatePeople(time);}};
 }

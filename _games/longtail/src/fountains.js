@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 
 // ICONSIAM's river plaza has moving water, not a static luminous wall.
-// Each droplet follows a ballistic arc; the same points appear in reflections.
+// Each droplet follows a ballistic arc; batched core streams supply its reflection.
 export function createFountains(scene,river,landmarks,mobile){
  const landmark=landmarks.find(l=>l.kind==='icon-siam');
  const jets=35,perJet=mobile?32:64,count=jets*perJet;
@@ -14,13 +14,13 @@ export function createFountains(scene,river,landmarks,mobile){
   #include <colorspace_fragment>
   }`
  });
- const points=new THREE.Points(geometry,material);points.frustumCulled=false;scene.add(points);
+ const points=new THREE.Points(geometry,material);points.frustumCulled=false;points.layers.set(1);scene.add(points);
  const streams=new THREE.InstancedMesh(new THREE.CylinderGeometry(.055,.13,1,6),new THREE.MeshBasicMaterial({color:0x7bbad1,transparent:true,opacity:.25,depthWrite:false,blending:THREE.AdditiveBlending}),jets);
  streams.instanceMatrix.setUsage(THREE.DynamicDrawUsage);streams.frustumCulled=false;scene.add(streams);const transform=new THREE.Object3D();
  const sources=[],centers=Array.from({length:jets},(_,j)=>{const d=landmark.distance+(j-(jets-1)/2)*3.8,p=river.sample(d),q=river.sample(d,landmark.side*(p.width/2+9));return{x:q.x,z:q.z,nx:q.nx,nz:q.nz};});
  for(let i=0;i<5;i++){const p=centers[i*7];sources.push({x:p.x,y:5,z:p.z,color:0x75c5df,power:16});}
- const tint=new THREE.Color();
- return{lights:sources,update(time){for(let j=0;j<jets;j++){
+ const tint=new THREE.Color();let lastUpdate=-1;
+ return{lights:sources,update(time,camera){const nearby=(camera.position.x-landmark.x)**2+(camera.position.z-landmark.z)**2<1100**2;points.visible=streams.visible=nearby;if(!nearby||time-lastUpdate<1/30)return;lastUpdate=time;for(let j=0;j<jets;j++){
   const p=centers[j],wave=.5+.5*Math.sin(time*.67+j*.28),height=3.5+wave*7.5;
   transform.position.set(p.x,3.25+height/2,p.z);transform.scale.set(1,height,1);transform.updateMatrix();streams.setMatrixAt(j,transform.matrix);
   tint.setHSL(.53+.055*Math.sin(time*.055+j*.032),.38,.59);

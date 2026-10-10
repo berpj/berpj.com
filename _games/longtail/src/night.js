@@ -13,17 +13,17 @@ export function createNightSky(scene) {
       float hash(vec2 p){return fract(sin(dot(p,vec2(127.1,311.7)))*43758.5453);}
       float noise(vec2 p){vec2 i=floor(p),f=fract(p);f=f*f*(3.-2.*f);
         return mix(mix(hash(i),hash(i+vec2(1,0)),f.x),mix(hash(i+vec2(0,1)),hash(i+vec2(1,1)),f.x),f.y);}
-      float fbm(vec2 p){float n=0.,a=.53;for(int i=0;i<5;i++){n+=noise(p)*a;p=mat2(1.6,1.2,-1.2,1.6)*p+17.7;a*=.5;}return n;}
+      float fbm(vec2 p){float n=0.,a=.53;for(int i=0;i<4;i++){n+=noise(p)*a;p=mat2(1.6,1.2,-1.2,1.6)*p+17.7;a*=.5;}return n;}
       void main(){
         vec3 d=normalize(direction);float h=max(d.y,0.);
         vec3 moonDir=normalize(vec3(-.43,.54,-.72));float moonDot=max(0.,dot(d,moonDir));
         float horizon=exp(-h*8.);
-        vec3 color=mix(vec3(.003,.006,.012),vec3(.021,.018,.019),horizon);
+        vec3 color=mix(vec3(.006,.011,.021),vec3(.033,.028,.030),horizon);
         color+=vec3(.012,.006,.002)*pow(horizon,3.);
         vec2 p=d.xz/(max(.10,d.y)+.20)*1.5+vec2(time*.0018,0.);
         float cloud=fbm(p+fbm(p*.57)*1.7);
         float veil=smoothstep(.40,.75,cloud)*smoothstep(-.04,.18,d.y);
-        vec3 cloudColor=mix(vec3(.012,.016,.024),vec3(.029,.024,.023),horizon);
+        vec3 cloudColor=mix(vec3(.020,.026,.036),vec3(.042,.036,.034),horizon);
         cloudColor+=vec3(.013,.018,.027)*pow(moonDot,24.);
         color=mix(color,cloudColor,veil*.76);
         float halo=pow(moonDot,180.);float disk=smoothstep(.99988,.99996,moonDot);
@@ -55,18 +55,18 @@ function riverNormals(){
 }
 
 export function createNightWater(scene,mobile){
-  const count=mobile?10:18;
+  const count=mobile?6:12;
   // Concentrate vertices around the camera for visible low swells. The outer
   // rings stretch to the horizon, so there is no second overlapping water sheet.
-  const geometry=new THREE.PlaneGeometry(2,2,mobile?80:144,mobile?80:144);
+  const geometry=new THREE.PlaneGeometry(2,2,mobile?64:112,mobile?64:112);
   const positions=geometry.attributes.position;
   const stretch=n=>Math.sign(n)*(Math.abs(n)<=.85?Math.abs(n)*320:272+Math.pow((Math.abs(n)-.85)/.15,3)*8728);
   for(let i=0;i<positions.count;i++){positions.setXY(i,stretch(positions.getX(i)),stretch(positions.getY(i)));}
   geometry.computeBoundingSphere();
   const water=new Water(geometry,{
-    textureWidth:mobile?512:1024,textureHeight:mobile?512:1024,
+    textureWidth:mobile?256:512,textureHeight:mobile?256:512,
     waterNormals:riverNormals(),sunDirection:new THREE.Vector3(-.43,.54,-.72).normalize(),
-    sunColor:0x728496,waterColor:0x02100f,distortionScale:1.8,fog:true,clipBias:.002
+    sunColor:0x728496,waterColor:0x051815,distortionScale:1.8,fog:true,clipBias:.002
   });
   water.rotation.x=-Math.PI/2;water.position.y=.04;water.name='chao-phraya-water';
   const material=water.material;
