@@ -5,12 +5,20 @@ import * as THREE from 'three';
 import {River,angleDelta} from '../src/river.mjs';
 import {boatSpecs} from '../src/boats.js';
 import {cargoSpecs} from '../src/cargo.js';
-import {createFleet,advanceFleet,convoyOffsets,trafficPose,TRAFFIC_SPEED_SCALE} from '../src/traffic.mjs';
+import {createFleet,advanceFleet,convoyOffsets,trafficPose,TRAFFIC_SPEED_SCALE,TRAFFIC_SIZE_SCALE} from '../src/traffic.mjs';
 import {capsuleContact,BoatPhysics,TUNING} from '../src/simulation.mjs';
 const source=JSON.parse(fs.readFileSync(new URL('../public/data/river-course.json',import.meta.url))).points;
 const raw=new River(source),curve=new THREE.CatmullRomCurve3(raw.points.map(p=>new THREE.Vector3(p.x,0,p.z)));
 const river=new River(curve.getSpacedPoints(320).map(p=>[p.x/108140+100.502,13.733-p.z/111320,raw.nearest(p.x,p.z).width]));
 const specs={...boatSpecs,...cargoSpecs};
+
+test('all traffic hulls grow together while the player specs and speeds stay unchanged',()=>{
+ const fleet=createFleet(river,specs);
+ assert.equal(TRAFFIC_SIZE_SCALE,1.18);
+ for(const actor of fleet.traffic){assert.equal(actor.length,specs[actor.kind].length*1.18);assert.equal(actor.width,specs[actor.kind].width*1.18);assert.equal(actor.scale,1.18);}
+ for(const convoy of fleet.convoys)assert.deepEqual(convoy.offsets,convoyOffsets(convoy.barges.length,convoy.tug.length,convoy.barges[0].length));
+ assert.equal(boatSpecs.longtail.length,12.4);assert.equal(boatSpecs.longtail.width,2.35);assert.equal(TUNING.speed,34);assert.equal(TUNING.boostSpeed,53);
+});
 
 test('denser fleets include both three and four barge convoys on desktop and mobile',()=>{
  for(const mobile of[false,true]){

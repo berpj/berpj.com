@@ -70,6 +70,10 @@ export function createNightWater(scene,mobile){
   });
   water.rotation.x=-Math.PI/2;water.position.y=.04;water.name='chao-phraya-water';
   const material=water.material;
+  // Filter warped reflection samples across mip levels instead of shimmering
+  // between single reflection texels as thin bridge lights move over ripples.
+  const reflection=material.uniforms.mirrorSampler.value;
+  reflection.generateMipmaps=true;reflection.minFilter=THREE.LinearMipmapLinearFilter;
   material.vertexShader=material.vertexShader.replace('uniform float time;','uniform float time;uniform vec3 eye;')
     .replace('worldPosition = mirrorCoord.xyzw;',`float distanceToBoat=length(mirrorCoord.xz-eye.xz);
       float swell=(sin(mirrorCoord.x*.47+mirrorCoord.z*.28+time*1.1)*.095+sin(mirrorCoord.z*.73-mirrorCoord.x*.22-time*1.42)*.038)*exp(-distanceToBoat*.004);

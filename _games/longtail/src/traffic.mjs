@@ -1,6 +1,7 @@
 import {clamp} from './river.mjs';
 
 export const TRAFFIC_SPEED_SCALE = 1.14;
+export const TRAFFIC_SIZE_SCALE = 1.18;
 export const FLEET_SIZE = Object.freeze({desktop:64,mobile:44});
 const TYPES=['cruise','ferry','longtail','electric','fishing','ferry','longtail','fishing'];
 const OFFSHORE_MARGIN=900;
@@ -22,7 +23,7 @@ export function trafficPose(river,distance,lane,direction=1,length=12){
 }
 export function createFleet(river,specs,mobile=false){
   const traffic=[],convoys=[],count=mobile?FLEET_SIZE.mobile:FLEET_SIZE.desktop;
-  const actor=(kind,variation,distance,direction,lane,speed)=>({kind,variation,...specs[kind],distance,direction,lane,speed,actualSpeed:speed,slow:0,nearCooldown:0,wakeClock:0,x:0,z:0,heading:0,vx:0,vz:0});
+  const actor=(kind,variation,distance,direction,lane,speed)=>({kind,variation,...specs[kind],scale:TRAFFIC_SIZE_SCALE,length:specs[kind].length*TRAFFIC_SIZE_SCALE,width:specs[kind].width*TRAFFIC_SIZE_SCALE,distance,direction,lane,speed,actualSpeed:speed,slow:0,nearCooldown:0,wakeClock:0,x:0,z:0,heading:0,vx:0,vz:0});
   for(let i=0;i<count;i++){
     const kind=TYPES[i%TYPES.length],direction=i%2?1:-1;
     const lane=(direction===1?-1:1)*(kind==='fishing'?74:28+(Math.floor(i/2)%3)*20);
@@ -31,7 +32,7 @@ export function createFleet(river,specs,mobile=false){
   for(let i=0;i<(mobile?2:3);i++){
     const count=i%2?4:3,direction=i%2?-1:1;
     const tug=actor('tug',i,1040+i*(river.length-1400)/((mobile?2:3)-1),direction,-direction*13.5,specs.tug.maxSpeed*(.88+i*.03));
-    const convoy={tug,barges:[],offsets:convoyOffsets(count,specs.tug.length,specs.barge.length)};
+    const convoy={tug,barges:[],offsets:convoyOffsets(count,tug.length,specs.barge.length*TRAFFIC_SIZE_SCALE)};
     tug.convoy=convoy;
     for(let j=0;j<count;j++){
       const barge=actor('barge',i*4+j,tug.distance-direction*convoy.offsets[j],direction,tug.lane,tug.speed);

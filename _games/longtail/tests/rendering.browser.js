@@ -4,10 +4,11 @@ import {UnrealBloomPass} from 'three/addons/postprocessing/UnrealBloomPass.js';
 import {SurfaceWakes} from '../src/effects.js';
 import {createNightWater} from '../src/night.js';
 import {createNightBloom} from '../src/postprocessing.js';
+import {VisibleLights} from '../src/visible-lights.js';
 
 const renderer=new THREE.WebGLRenderer({antialias:false});
 renderer.setSize(128,128);renderer.toneMapping=THREE.NoToneMapping;
-const size=128,target=new THREE.WebGLRenderTarget(size,size,{type:THREE.HalfFloatType,depthBuffer:false});
+const size=128,target=new THREE.WebGLRenderTarget(size,size,{type:THREE.HalfFloatType,depthBuffer:true});
 const scene=new THREE.Scene(),camera=new THREE.OrthographicCamera(-1,1,1,-1,.1,10);camera.position.z=2;
 const checks=document.querySelector('#checks');let failures=0;
 function check(name,fn){const li=document.createElement('li');try{const detail=fn();li.textContent=`PASS: ${name} (${detail})`;li.className='pass';}catch(error){failures++;li.textContent=`FAIL: ${name}: ${error.message}`;li.className='fail';}checks.append(li);}
@@ -65,5 +66,36 @@ check('normal HDR lights keep their original bloom',()=>{
   material.dispose();let changed=0;for(let i=0;i<pixels[0].length;i++)if(pixels[0][i]!==pixels[1][i])changed++;
   assert(changed===0,`${changed} channels changed`);return 'pixel-identical to the original lighting';
 });
+function lightImage(lightScene,lightCamera){
+  renderer.setRenderTarget(target);renderer.clear();renderer.render(lightScene,lightCamera);
+  const pixels=new Uint16Array(size*size*4);renderer.readRenderTargetPixels(target,0,0,size,size,pixels);
+  let energy=0,peak=0;for(let i=0;i<pixels.length;i+=4){const value=THREE.DataUtils.fromHalfFloat(pixels[i]);assert(Number.isFinite(value),'invalid light pixel');energy+=value;peak=Math.max(peak,value);}
+  return {energy,peak};
+}
+check('distant bulbs and strips remain visible at 250 to 2000 metres',()=>{
+  const s=new THREE.Scene();s.fog=new THREE.FogExp2(0,.00056);
+  const c=new THREE.PerspectiveCamera(62,1,.3,8000);
+  const lights=new VisibleLights(s,[{a:[-100,0,0],b:[100,0,0],width:.22,color:[3,2,1]},{a:[0,30,0],b:[0,30,0],width:.18,color:[3,2,1]}]);
+  for(const distance of[250,500,1000,2000]){c.position.set(0,0,distance);const {peak,energy}=lightImage(s,c);assert(peak>.1&&energy>1,`lights disappeared at ${distance}m`);}
+  lights.geometry.dispose();lights.material.dispose();return 'both emitters stay visible';
+});
+check('thin horizontal lights keep stable brightness across subpixel camera motion',()=>{
+  const s=new THREE.Scene(),c=new THREE.PerspectiveCamera(62,1,.3,8000);c.position.z=1000;
+  const lights=new VisibleLights(s,[{a:[-200,0,0],b:[200,0,0],width:.22,color:[3,2,1]}]);
+  const worldPerPixel=2*1000*Math.tan(THREE.MathUtils.degToRad(31))/size,energy=[];
+  for(let i=0;i<16;i++){c.position.y=i/16*worldPerPixel;energy.push(lightImage(s,c).energy);}
+  const variation=(Math.max(...energy)-Math.min(...energy))/(energy.reduce((a,b)=>a+b,0)/energy.length);
+  assert(variation<.12,`brightness varied ${(variation*100).toFixed(1)}%`);
+  lights.geometry.dispose();lights.material.dispose();return `${(variation*100).toFixed(1)}% brightness variation over one pixel`;
+});
+check('distant lights respect solid occluders and camera clipping',()=>{
+  const s=new THREE.Scene(),c=new THREE.PerspectiveCamera(62,1,.3,8000);c.position.z=1000;
+  const lights=new VisibleLights(s,[{a:[0,0,0],b:[0,0,0],width:.2,color:[3,2,1]}]);
+  assert(lightImage(s,c).energy>1,'initial bulb is missing');
+  const wall=new THREE.Mesh(new THREE.BoxGeometry(200,200,10),new THREE.MeshBasicMaterial({color:0}));wall.position.z=500;s.add(wall);
+  assert(lightImage(s,c).energy===0,'bulb shines through a building');
+  s.remove(wall);c.position.z=-10;assert(lightImage(s,c).energy===0,'behind-camera bulb is visible');
+  lights.geometry.dispose();lights.material.dispose();wall.geometry.dispose();wall.material.dispose();return 'no glow through walls or behind the camera';
+});
 renderer.setRenderTarget(null);target.dispose();renderer.dispose();
-document.querySelector('#result').textContent=failures?`${failures} GPU checks failed`:'All 5 GPU checks passed';
+document.querySelector('#result').textContent=failures?`${failures} GPU checks failed`:`All ${checks.children.length} GPU checks passed`;

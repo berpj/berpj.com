@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import {collectLightFixture} from './visible-lights.js';
 import {mergeGeometries} from 'three/addons/utils/BufferGeometryUtils.js';
 
 const box=new THREE.BoxGeometry(1,1,1),sphere=new THREE.SphereGeometry(1,8,6);
@@ -7,8 +8,8 @@ const lamps=[0xffb768,0xffcf8f,0xe8ae67,0x8acecd];
 function seedRandom(seed){return()=>{seed=(Math.imul(seed,1664525)+1013904223)>>>0;return seed/4294967296;};}
 
 class ShoreBatch{
- constructor(){this.parts=new Map();this.matrix=new THREE.Matrix4();this.q=new THREE.Quaternion();this.v=new THREE.Vector3();this.s=new THREE.Vector3();}
- add(g,m,x,y,z,sx=1,sy=1,sz=1,ry=0){this.q.setFromAxisAngle(new THREE.Vector3(0,1,0),ry);this.matrix.compose(this.v.set(x,y,z),this.q,this.s.set(sx,sy,sz));let copy=g.clone().applyMatrix4(this.matrix);if(copy.index){const old=copy;copy=old.toNonIndexed();old.dispose();}if(!this.parts.has(m))this.parts.set(m,[]);this.parts.get(m).push(copy);}
+ constructor(){this.fixtures=[];this.parts=new Map();this.matrix=new THREE.Matrix4();this.q=new THREE.Quaternion();this.v=new THREE.Vector3();this.s=new THREE.Vector3();}
+ add(g,m,x,y,z,sx=1,sy=1,sz=1,ry=0){this.q.setFromAxisAngle(new THREE.Vector3(0,1,0),ry);this.matrix.compose(this.v.set(x,y,z),this.q,this.s.set(sx,sy,sz));if(collectLightFixture(this.fixtures,g,m,this.matrix))return;let copy=g.clone().applyMatrix4(this.matrix);if(copy.index){const old=copy;copy=old.toNonIndexed();old.dispose();}if(!this.parts.has(m))this.parts.set(m,[]);this.parts.get(m).push(copy);}
  box(m,x,y,z,w,h,d,ry=0){this.add(box,m,x,y,z,w,h,d,ry);}
  line(m,a,b,r=.05){const va=new THREE.Vector3(...a),vb=new THREE.Vector3(...b),delta=vb.clone().sub(va),g=new THREE.CylinderGeometry(r,r,delta.length(),5);g.applyQuaternion(new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0,1,0),delta.normalize()));const mid=va.add(vb).multiplyScalar(.5);this.add(g,m,mid.x,mid.y,mid.z);g.dispose();}
  finish(parent){for(const[m,parts]of this.parts){const geometry=mergeGeometries(parts);parts.forEach(p=>p.dispose());const mesh=new THREE.Mesh(geometry,m);parent.add(mesh);}this.parts.clear();}
@@ -93,5 +94,5 @@ export function createRiverfront(scene,river,landmarks,mobile){
  }for(const part of personParts)part.mesh.instanceMatrix.needsUpdate=true;};
  updatePeople(0);
  let lastPeopleUpdate=-1;
- return {lights,update(time){if(time-lastPeopleUpdate<1/24)return;lastPeopleUpdate=time;updatePeople(time);}};
+ return {lights,fixtures:batch.fixtures,update(time){if(time-lastPeopleUpdate<1/24)return;lastPeopleUpdate=time;updatePeople(time);}};
 }

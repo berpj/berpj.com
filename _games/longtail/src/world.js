@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import {createNightSky,createNightWater} from './night.js';
+import {VisibleLights,collectLightFixture,transformLightFixtures} from './visible-lights.js';
 import {createRiverfront} from './riverfront.js';
 import {createFountains} from './fountains.js';
 import {mergeGeometries} from 'three/addons/utils/BufferGeometryUtils.js';
@@ -10,10 +11,10 @@ const rnd=seed=>()=>{seed=(Math.imul(seed,1664525)+1013904223)>>>0;return seed/4
 const random=rnd(81623);
 const M=(color,emissive=0,intensity=0)=>new THREE.MeshStandardMaterial({color,emissive,emissiveIntensity:intensity,roughness:.72});
 class Batch{
- constructor(){this.parts=new Map();this.transform=new THREE.Object3D();}
- add(geometry,material,x,y,z,sx=1,sy=1,sz=1,ry=0){const o=this.transform;o.position.set(x,y,z);o.rotation.set(0,ry,0);o.scale.set(sx,sy,sz);o.updateMatrix();const g=geometry.clone().applyMatrix4(o.matrix);if(!this.parts.has(material))this.parts.set(material,[]);this.parts.get(material).push(g);}
+ constructor(lightTarget){this.parts=new Map();this.transform=new THREE.Object3D();this.lightTarget=lightTarget;this.lightFixtures=[];}
+ add(geometry,material,x,y,z,sx=1,sy=1,sz=1,ry=0){const o=this.transform;o.position.set(x,y,z);o.rotation.set(0,ry,0);o.scale.set(sx,sy,sz);o.updateMatrix();if(this.lightTarget&&collectLightFixture(this.lightFixtures,geometry,material,o.matrix))return;const g=geometry.clone().applyMatrix4(o.matrix);if(!this.parts.has(material))this.parts.set(material,[]);this.parts.get(material).push(g);}
  box(m,x,y,z,w,h,d,ry=0){this.add(unitBox,m,x,y,z,w,h,d,ry);}
- finish(parent){for(const[m,parts]of this.parts){const g=mergeGeometries(parts);parts.forEach(p=>p.dispose());if(g){const mesh=new THREE.Mesh(g,m);parent.add(mesh);}}this.parts.clear();}
+ finish(parent){for(const[m,parts]of this.parts){const g=mergeGeometries(parts);parts.forEach(p=>p.dispose());if(g){const mesh=new THREE.Mesh(g,m);parent.add(mesh);}}this.parts.clear();if(this.lightTarget){parent.updateWorldMatrix(true,false);this.lightTarget.push(...transformLightFixtures(this.lightFixtures,parent.matrixWorld));this.lightFixtures=[];}}
 }
 const unitBox=new THREE.BoxGeometry(1,1,1);
 export function sign(text,w=20,h=4,bg='#13283c',fg='#ffde9b'){
@@ -50,6 +51,7 @@ export const LANDMARKS=[
  ['state-tower','State Tower',100.516897,13.7215374,-1],
 ];
 export function createWorld(scene,river,piers,mobile){
+ const lightFixtures=[];
  const warm=M(0xd3b88b,0xffb34e,.3),stone=M(0x515558),rail=M(0x23323b),glow=new THREE.MeshBasicMaterial({color:new THREE.Color(0xffcb83).multiplyScalar(2.5)}),cyan=new THREE.MeshBasicMaterial({color:new THREE.Color(0x64c6be).multiplyScalar(1.6)});
  const buildings=new THREE.Group();scene.add(buildings);
  const points=[];for(let d=0;d<river.length;d+=20)points.push(river.sample(d));points.push(river.sample(river.length));
@@ -69,7 +71,7 @@ export function createWorld(scene,river,piers,mobile){
   const bounds=new THREE.Box3().setFromObject(model);landmarks.push({kind,name,x:safe.x,z:safe.z,distance:n.distance,bounds,side,reserveLength:(localBounds.max.x-localBounds.min.x)/2+22,inland:offset-localBounds.min.z+20});
  }
  // Dense, varied riverside fabric; reserved landmark footprints are kept clear.
- const mats=Array.from({length:5},(_,i)=>[cityMaterial(i,4),cityMaterial(i,10),cityMaterial(i,22)]);const photo=new THREE.TextureLoader().load(`${import.meta.env.BASE_URL}textures/riverside-shophouses.png`);photo.colorSpace=THREE.SRGBColorSpace;photo.anisotropy=4;const shophouse=new THREE.MeshStandardMaterial({map:photo,color:0xa6a8a2,emissiveMap:photo,emissive:0xffd9a0,emissiveIntensity:.035,roughness:.95});const batch=new Batch(),roof=M(0x283239),market=M(0x7b4435),leaf=M(0x233f30),trunk=M(0x44352c);
+ const mats=Array.from({length:5},(_,i)=>[cityMaterial(i,4),cityMaterial(i,10),cityMaterial(i,22)]);const photo=new THREE.TextureLoader().load(`${import.meta.env.BASE_URL}textures/riverside-shophouses.png`);photo.colorSpace=THREE.SRGBColorSpace;photo.anisotropy=4;const shophouse=new THREE.MeshStandardMaterial({map:photo,color:0xa6a8a2,emissiveMap:photo,emissive:0xffd9a0,emissiveIntensity:.035,roughness:.95});const batch=new Batch(lightFixtures),roof=M(0x283239),market=M(0x7b4435),leaf=M(0x233f30),trunk=M(0x44352c);
  for(let d=20;d<river.length;d+=35){for(const side of [-1,1]){const riverPoint=river.sample(d);for(let row=0;row<3;row++){
   const width=18+random()*24,depth=20+random()*23,offset=side*(riverPoint.width/2+depth/2+12+row*110),p=river.sample(d+(random()-.5)*14,offset);let height=11+random()*25;
   if(row>0)height+=random()*45;if(d>river.length*.62&&random()>.72)height+=random()*90;const oldTown=d<river.length*.48;if(oldTown)height=6+random()*13+row*4;if(row===0&&oldTown)height=9+random()*4;
@@ -88,8 +90,8 @@ export function createWorld(scene,river,piers,mobile){
  // Recognisable steel Memorial Bridge, neighbouring Sky Park and concrete Taksin.
  const bridgeColliders=[];const bridgeGroups=[];
  function bridge(lat,lon,name,type){
-  const p=project(lon,lat),n=river.nearest(p.x,p.z),g=new THREE.Group();g.position.set(n.x,0,n.z);g.rotation.y=Math.atan2(-n.nz,n.nx);scene.add(g);const b=new Batch(),span=n.width+200,h=type==='steel'?16:19,steel=M(type==='steel'?0x487962:0x646f7b),accent=type==='steel'?glow:cyan;
-  b.box(steel,0,h,0,span,2.5,type==='steel'?17:29);for(const z of[-9,9]){b.box(accent,0,h+1.4,z,span,.22,.22);if(type==='steel'){
+  const p=project(lon,lat),n=river.nearest(p.x,p.z),g=new THREE.Group();g.position.set(n.x,0,n.z);g.rotation.y=Math.atan2(-n.nz,n.nx);scene.add(g);const b=new Batch(lightFixtures),span=n.width+200,h=type==='steel'?16:19,steel=M(type==='steel'?0x487962:0x646f7b),accent=type==='steel'?glow:cyan;
+  b.box(steel,0,h,0,span,2.5,type==='steel'?17:29);for(const side of[-1,1]){const z=side*(type==='steel'?9:14.75);b.box(accent,0,h+.55,z,span,.22,.22);if(type==='steel'){
    b.box(steel,0,h+13,z,span,1.1,1.1);for(let x=-span/2;x<span/2;x+=30){b.box(steel,x,h+7,z,.7,12,.7);const beam=new THREE.BoxGeometry(1,1,1);const o=new THREE.Object3D();o.position.set(x+15,h+7,z);o.rotation.z=Math.atan2(30,12);o.scale.set(.65,Math.hypot(30,12),.65);o.updateMatrix();b.parts.set(steel,[...(b.parts.get(steel)||[]),beam.applyMatrix4(o.matrix)]);}}
   }
   for(const x of[-n.width*.27,n.width*.27]){b.box(steel,x,h/2,0,8,h,13);const v=new THREE.Vector3(x,0,0).applyMatrix4(g.matrixWorld);g.updateMatrixWorld();g.localToWorld(v.set(x,0,0));bridgeColliders.push({x:v.x,z:v.z,width:9,length:16,heading:g.rotation.y,mass:10000,vx:0,vz:0});}
@@ -104,23 +106,24 @@ export function createWorld(scene,river,piers,mobile){
   const set=(mesh,index,px,py,pz,sx,sy,sz)=>{carTransform.position.set(px,py,pz);carTransform.rotation.set(0,0,0);carTransform.scale.set(sx,sy,sz);carTransform.updateMatrix();carTransform.matrix.premultiply(group.matrixWorld);mesh.setMatrixAt(index,carTransform.matrix);};
   group.updateMatrixWorld();set(carMeshes[0],i,x,height+2.3,lane,4,1.25,1.65);for(let side=0;side<2;side++){set(carMeshes[1],i*2+side,x+dir*2.04,height+2.25,lane+(side-.5)*1.2,.07,.22,.28);set(carMeshes[2],i*2+side,x-dir*2.04,height+2.25,lane+(side-.5)*1.2,.07,.2,.3);}
  }carMeshes.forEach(m=>m.instanceMatrix.needsUpdate=true);}
- const limits=new Batch(),buoy=M(0xb62e28,0xff572d,.35);for(const distance of[2,river.length-2]){const p=river.sample(distance);for(let offset=-p.width*.43;offset<=p.width*.43;offset+=p.width/7){const q=river.sample(distance,offset);limits.add(new THREE.SphereGeometry(1.05,8,6),buoy,q.x,.55,q.z,1,.9,1);limits.box(glow,q.x,1.7,q.z,.25,.6,.25);}const marker=sign('RIVER LIMIT · TURN BACK',27,3,'#18313b','#ffd290');marker.position.set(p.x,6,p.z);marker.rotation.y=p.heading;scene.add(marker);}limits.finish(scene);
+ const limits=new Batch(lightFixtures),buoy=M(0xb62e28,0xff572d,.35);for(const distance of[2,river.length-2]){const p=river.sample(distance);for(let offset=-p.width*.43;offset<=p.width*.43;offset+=p.width/7){const q=river.sample(distance,offset);limits.add(new THREE.SphereGeometry(1.05,8,6),buoy,q.x,.55,q.z,1,.9,1);limits.box(glow,q.x,1.7,q.z,.25,.6,.25);}const marker=sign('RIVER LIMIT · TURN BACK',27,3,'#18313b','#ffd290');marker.position.set(p.x,6,p.z);marker.rotation.y=p.heading;scene.add(marker);}limits.finish(scene);
  const pierVisuals=[];
- for(const p of piers){const g=new THREE.Group();g.position.set(p.x,0,p.z);const b=new Batch(),heading=Math.atan2(p.nx,p.nz);g.rotation.y=heading;
+ for(const p of piers){const g=new THREE.Group();g.position.set(p.x+p.nx*15,0,p.z+p.nz*15);const b=new Batch(lightFixtures),heading=Math.atan2(p.nx,p.nz);g.rotation.y=heading;
   b.box(stone,0,1.2,0,17,1.3,9);b.box(warm,0,1.8,15,4,.5,31);b.box(rail,0,5.9,0,18,.35,9.6);
   for(const x of[-7.3,7.3])for(const z of[-3.7,3.7]){b.box(warm,x,3.8,z,.32,4.5,.32);b.box(rail,x,-.2,z,.65,3,.65);}
   b.box(glow,0,5.7,-4.8,17,.2,.22);
   // Small groups waiting under the pier canopy.
   const skin=M(0xb58869),shirt=M([0x8bbfc1,0xd8ae68,0xa5604d][p.index%3]),pants=M(0x283644);for(let i=0;i<3;i++){const x=(i-1)*2.8,z=-.7+(i%2)*1.4;b.box(shirt,x,3.1,z,.57,.85,.34);b.add(new THREE.SphereGeometry(.22,7,6),skin,x,3.73,z,1,1.18,.96);for(const s of[-1,1]){b.box(pants,x+s*.15,2.35,z,.19,.75,.22);b.box(shirt,x+s*.38,3.05,z,.15,.65,.19);}}b.finish(g);const label=sign(p.name.toUpperCase(),15,2);label.position.set(0,5,-4.9);label.rotation.y=Math.PI;g.add(label);
   // The water-side pickup is offset from the solid pontoon, leaving a clear berth.
-  g.position.x+=p.nx*15;g.position.z+=p.nz*15;scene.add(g);bridgeColliders.push({x:g.position.x,z:g.position.z,width:9,length:17,heading:heading-Math.PI/2,mass:10000,vx:0,vz:0});
+  scene.add(g);bridgeColliders.push({x:g.position.x,z:g.position.z,width:9,length:17,heading:heading-Math.PI/2,mass:10000,vx:0,vz:0});
   const ring=new THREE.Mesh(new THREE.RingGeometry(17.5,18.3,64),new THREE.MeshBasicMaterial({color:0xffbd66,transparent:true,opacity:.8,side:THREE.DoubleSide,depthWrite:false,toneMapped:false}));ring.rotation.x=-Math.PI/2;ring.position.set(p.x,.18,p.z);scene.add(ring);
   const beacon=sign('PICK UP',13,2.8,'#163237','#ffd995');beacon.position.set(p.x,9,p.z);scene.add(beacon);pierVisuals.push({pier:p,ring,beacon});
  }
  const nightSky=createNightSky(scene),sky=nightSky.sky;
  const riverfront=createRiverfront(scene,river,landmarks,mobile),fountains=createFountains(scene,river,landmarks,mobile);
+ lightFixtures.push(...riverfront.fixtures);const visibleLights=new VisibleLights(scene,lightFixtures);
  const localLights=Array.from({length:mobile?2:3},()=>{const l=new THREE.PointLight(0xffc17c,0,46,2);scene.add(l);return l;});
- return {water,landmarks,pierVisuals,bridgeColliders,sky,update(time,camera,shift,boatLights=[]){nightSky.update(time);updateBridgeTraffic(time);riverfront.update(time,camera);fountains.update(time,camera);const lightSources=[...riverfront.lights,...fountains.lights,...boatLights];nightWater.update(time,camera,lightSources);
+ return {water,landmarks,pierVisuals,bridgeColliders,sky,visibleLights,update(time,camera,shift,boatLights=[]){nightSky.update(time);updateBridgeTraffic(time);riverfront.update(time,camera);fountains.update(time,camera);const lightSources=[...riverfront.lights,...fountains.lights,...boatLights];nightWater.update(time,camera,lightSources);
  const nearby=lightSources.map(s=>({s,d:(s.x-camera.position.x)**2+(s.z-camera.position.z)**2})).sort((a,b)=>a.d-b.d);
  for(let i=0;i<localLights.length;i++){const s=nearby[i]?.s,l=localLights[i];l.intensity=s?Math.min(100,s.power*(s.boat?.48:1.9)):0;if(s){l.position.set(s.x,s.y,s.z);l.color.set(s.color);l.distance=s.distance||46;}}
 for(const v of pierVisuals){const active=shift.fare?shift.fare.to.id===v.pier.id:!shift.finished&&(shift.cooldowns.get(v.pier.id)||0)<=shift.clock;v.ring.visible=v.beacon.visible=active;if(active){v.ring.material.color.set(shift.fare?0x89f2cf:0xffbd66);v.ring.material.opacity=.55+Math.sin(time*3)*.15;v.beacon.quaternion.copy(camera.quaternion);v.beacon.visible=camera.position.distanceTo(v.beacon.position)<550;v.beacon.position.y=9+Math.sin(time*2)*.6;}}}};

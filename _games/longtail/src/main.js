@@ -14,6 +14,7 @@ import {createFleet,advanceFleet} from './traffic.mjs';
 import {createTrafficBoat,updateTrafficDetail} from './traffic-visuals.js';
 import {createTowlines} from './towlines.js';
 import {simplifyBoatReflections} from './reflections.js';
+import {VisibleLights,boatLightFixtures} from './visible-lights.js';
 import {Controls} from './input.js';
 import {Wake,SurfaceWakes} from './effects.js';
 import {RiverAudio} from './audio.js';
@@ -40,7 +41,7 @@ let scores=[];try{scores=cleanScores(JSON.parse(storage.getItem(RECORD_KEY)||'[]
 const best=()=>scores[0]?.score||0,money=v=>`฿ ${Math.round(v).toLocaleString()}`,time=v=>`${Math.floor(v/60).toString().padStart(2,'0')}:${Math.floor(v%60).toString().padStart(2,'0')}`;
 function records(){ $('#menu-best').textContent=money(best());$('#hud-best').textContent=money(best());$('#menu-record-note').textContent=scores.length?`${scores[0].deliveries} fares on your best night. Can you beat it?`:'Pick up passengers. Dodge cruises. Beat your best.';}
 records();
-let frameMeter,fleet,towlines,renderBudget,smaa,fxaa,stillFrame=false;const boatLightPoint=new THREE.Vector3();
+let frameMeter,fleet,fleetLights,towlines,renderBudget,smaa,fxaa,stillFrame=false;const boatLightPoint=new THREE.Vector3();
 let mode='menu',free=false,ready=false,shift,boat,river,piers,world,traffic=[],player,renderer,scene,camera,composer,wake,surfaceWakes;let countdown=0,simTime=0,accumulator=0,previousTime=0,arrowRotation=0,hudAge=0,slideTime=0,toastUntil=0,stuntUntil=0,crashCooldown=0,recorded=false,cameraHeading=0;let previous={x:0,z:0,heading:0};const cameraAim=new THREE.Vector3(),cameraPosition=new THREE.Vector3();const audio=new RiverAudio();
 const controls=new Controls({pause:force=>togglePause(force),horn:()=>audio.horn(),recover:()=>recover()});controls.bind();
 function toast(message,duration=4){$('#toast').textContent=message;toastUntil=simTime+duration;$('#toast').style.opacity='1';}
@@ -65,8 +66,9 @@ function drawMap(){const cv=$('#minimap'),c=cv.getContext('2d'),w=cv.width,h=cv.
  for(const p of piers){if(shift.fare&&shift.fare.to.id!==p.id)continue;if(!shift.fare&&(shift.cooldowns.get(p.id)||0)>shift.clock)continue;const[x,y]=xy(p);c.fillStyle=shift.fare?'#9df3cf':'#ffd18b';c.beginPath();c.arc(x,y,shift.fare?5:3,0,Math.PI*2);c.fill();}const[x,y]=xy(boat);c.save();c.translate(x,y);c.rotate(-boat.heading);c.fillStyle='#fff6dc';c.beginPath();c.moveTo(0,-7);c.lineTo(5,6);c.lineTo(0,3);c.lineTo(-5,6);c.closePath();c.fill();c.restore();}
 function makeTraffic(){
  fleet=createFleet(river,{...boatSpecs,...cargoSpecs},mobile);traffic=fleet.traffic;
- for(const t of traffic){t.mesh=t.convoy?createCargoBoat(t.kind,t.variation):createTrafficBoat(t.kind,t.variation,mobile);scene.add(t.mesh);}
+ for(const t of traffic){t.mesh=t.convoy?createCargoBoat(t.kind,t.variation):createTrafficBoat(t.kind,t.variation,mobile);t.mesh.scale.setScalar(t.scale);scene.add(t.mesh);}
  towlines=createTowlines(scene,fleet.convoys);stepTraffic(0);
+ fleetLights=new VisibleLights(scene,traffic.flatMap(t=>boatLightFixtures(t.kind).map(f=>({...f,parent:t.mesh}))),{dynamic:true});
 }
 function stepTraffic(dt){
  advanceFleet(fleet,river,dt);
@@ -103,7 +105,7 @@ function animate(now){requestAnimationFrame(animate);const frameDt=(now-previous
  for(const t of traffic){const distance=Math.hypot(t.x-camera.position.x,t.z-camera.position.z);updateTrafficDetail(t.mesh,distance,mobile);if(distance<350)collectLights(t.mesh);if(distance<420&&!t.towed)nearbyTraffic.push({actor:t,distance});}
  nearbyTraffic.sort((a,b)=>a.distance-b.distance);
  const wakeActors=nearbyTraffic.slice(0,mobile?10:16).map(t=>t.actor);if(mode!=='menu')wakeActors.unshift(boat);
- surfaceWakes.update(dt,wakeActors);world.update(simTime,camera,shift,boatLights);if(mode==='menu')for(const p of world.pierVisuals){p.ring.visible=false;p.beacon.visible=false;}
+ fleetLights.update();surfaceWakes.update(dt,wakeActors);world.update(simTime,camera,shift,boatLights);if(mode==='menu')for(const p of world.pierVisuals){p.ring.visible=false;p.beacon.visible=false;}
  $('#stunt').hidden=simTime>stuntUntil;$('#toast').style.opacity=simTime>toastUntil?'0':'1';hudAge+=dt;if(hudAge>.09){hudAge=0;if(mode!=='menu')updateHUD();}
  frameMeter?.begin();composer.render();frameMeter?.end(frameDt);const ratio=renderBudget.update(frameDt);if(ratio!==null){renderer.setPixelRatio(ratio);composer.setPixelRatio(ratio);if(smaa){if(ratio<=1.1){smaa.enabled=false;fxaa.enabled=true;}else if(ratio>=1.25){smaa.enabled=true;fxaa.enabled=false;}}}
 }
