@@ -48,8 +48,11 @@ test('countersteering changes slide direction and braking stops a slide without 
   const s=setup(t);s.run(3);s.run(1,{steer:.7,drift:true});
   assert.ok(s.v.slipAngle<-.3);
   s.run(1.3,{steer:-.7,drift:true});assert.ok(s.v.slipAngle>.3);
-  s.run(.6,{steer:-.7,drift:true,brake:1,throttle:0});
-  assert.ok(s.v.actualSpeed<.2);assert.equal(s.v.drifting,false);assert.equal(s.v.driftIntensity,0);
+  let brakingTime=0;
+  while(s.v.actualSpeed>.2&&brakingTime<.6){s.run(1/60,{steer:-.7,drift:true,brake:1,throttle:0});brakingTime+=1/60;}
+  assert.ok(s.v.actualSpeed<.2);assert.ok(brakingTime<.45);assert.equal(s.v.autoReverse,false);
+  assert.equal(s.v.drifting,false);assert.equal(s.v.driftIntensity,0);
+  s.run(.35,{brake:1,throttle:0});assert.equal(s.v.autoReverse,true);assert.ok(s.v.speed< -1,'holding brake after stopping backs out of the corner');
   assert.ok(s.v.position.y>.5&&s.v.position.y<.65);
 });
 

@@ -1,7 +1,7 @@
 import test from 'node:test';import assert from 'node:assert/strict';import RAPIER from '@dimforge/rapier3d-compat';import * as THREE from 'three';
 import {Vehicle} from '../src/game/vehicle.js';await RAPIER.init();
 function setup(){const world=new RAPIER.World({x:0,y:-9.81,z:0});world.createCollider(RAPIER.ColliderDesc.cuboid(10000,.1,10000).setTranslation(0,-.1,0).setFriction(0));const v=new Vehicle(world,RAPIER,new THREE.Group(),{x:0,z:0,heading:0});return {world,v,run(seconds,input){const events=[];for(let i=0;i<seconds*60;i++){events.push(v.step(1/60,{steer:0,gear:1,throttle:0,brake:0,...input}));world.step();v.sync(1/60);}return events;}};}
-test('the chassis reaches 100 km/h in three seconds, stays grounded and stops short',()=>{const s=setup();s.run(3,{throttle:1});assert.ok(s.v.actualSpeed*3.6>100&&s.v.actualSpeed*3.6<110);assert.ok(s.v.position.z<-30);assert.ok(s.v.position.y>.5&&s.v.position.y<.65);const before=s.v.position.z;s.run(1,{brake:1});assert.ok(s.v.actualSpeed<.1);assert.ok(Math.abs(s.v.position.z-before)<8);s.world.free();});
+test('the chassis reaches 100 km/h in three seconds, stays grounded and stops short',()=>{const s=setup();s.run(3,{throttle:1});assert.ok(s.v.actualSpeed*3.6>100&&s.v.actualSpeed*3.6<110);assert.ok(s.v.position.z<-30);assert.ok(s.v.position.y>.5&&s.v.position.y<.65);const before=s.v.position.z;let elapsed=0;while(s.v.actualSpeed>.1&&elapsed<1){s.run(1/60,{brake:1});elapsed+=1/60;}assert.ok(s.v.actualSpeed<.1);assert.ok(elapsed<.65);assert.ok(Math.abs(s.v.position.z-before)<8);s.world.free();});
 test('held burst lasts indefinitely and can restart on the very next tick',()=>{
   const s=setup();
   const events=s.run(15,{dash:true});
@@ -59,7 +59,7 @@ test('full-speed stops are short and a brake cancels turbo before reverse',()=>{
     const distance=start-s.v.position.z;
     assert.ok(distance<(boost?22:10),`stopping distance ${distance.toFixed(2)} m at ${(speed*3.6).toFixed(1)} km/h`);
     assert.ok(elapsed<(boost?1.1:.8));assert.equal(s.v.bursting,false);assert.equal(s.v.autoReverse,false);
-    s.run(.35,{brake:1});assert.ok(s.v.actualSpeed<.1);s.world.free();
+    s.run(.35,{brake:1});assert.ok(s.v.speed< -1,'continuing the same brake press promptly engages reverse');assert.equal(s.v.autoReverse,true);s.world.free();
   }
 });
 
@@ -97,4 +97,55 @@ test('gear-combo burst has no time limit but releases with the accelerator',()=>
   const s=setup();s.run(1,{throttle:1});s.run(1/60,{reverseEdge:true,throttle:1});s.run(1/60,{driveEdge:true,throttle:1});
   s.run(3,{throttle:1});assert.equal(s.v.bursting,true);assert.ok(s.v.actualSpeed*3.6>179);
   s.run(1/60,{});assert.equal(s.v.bursting,false);s.world.free();
+});
+
+
+test('brake-held reverse begins promptly and accelerates decisively on manual and auto throttle',()=>{
+  for(const auto of [false,true]){
+    const s=setup();let firstReverse=null;
+    for(let i=1;i<=36;i++){
+      s.run(1/60,{brake:1,auto});
+      if(firstReverse===null&&s.v.speed<-.1)firstReverse=i/60;
+    }
+    assert.ok(firstReverse>0&&firstReverse<=.2,`reverse begins at ${firstReverse}s`);
+    assert.ok(s.v.speed< -3.5,'reaches useful reverse speed within 0.6s');
+    assert.ok(s.v.position.z>.75,'backs away instead of idling');
+    s.run(2,{brake:1,auto});assert.ok(s.v.speed>=-7.1&&s.v.speed< -6.8);
+    s.world.free();
+  }
+});
+
+test('releasing a short brake tap avoids reverse and locked boarding cannot back away',()=>{
+  const s=setup();s.run(.08,{brake:1});s.run(.6,{});
+  assert.equal(s.v.autoReverse,false);assert.ok(Math.abs(s.v.position.z)<.01);
+  for(let i=0;i<90;i++){s.v.step(1/60,{steer:1,gear:1,throttle:0,brake:1},true);s.world.step();s.v.sync(1/60);}
+  assert.equal(s.v.autoReverse,false);assert.ok(Math.abs(s.v.position.z)<.01);
+  s.world.free();
+});
+
+test('ordinary road-speed corners make a 90-degree turn within 1.5s and a 32m radius',()=>{
+  for(const steer of [-1,1]){
+    const s=setup();s.run(4,{throttle:1});const startHeading=s.v.heading;
+    let elapsed=0,travel=0;
+    while(Math.abs(s.v.heading-startHeading)<Math.PI/2&&elapsed<2){
+      const p={...s.v.position};s.run(1/60,{throttle:1,steer});
+      travel+=Math.hypot(s.v.position.x-p.x,s.v.position.z-p.z);elapsed+=1/60;
+    }
+    assert.ok(elapsed<=1.5,`90-degree turn takes ${elapsed}s`);
+    const radius=travel/Math.abs(s.v.heading-startHeading);
+    assert.ok(radius>20&&radius<32,`turn radius ${radius}m`);
+    assert.ok(s.v.actualSpeed>32&&s.v.actualSpeed<34,'keeps cruise speed through normal steering');
+    assert.ok(s.v.position.y>.5&&s.v.position.y<.65);s.world.free();
+  }
+});
+
+test('creeping turns and reverse manoeuvres steer tightly, with no rotation while stationary',()=>{
+  for(const gear of [1,-1]){
+    const s=setup();s.run(.4,{throttle:1,gear});const before=s.v.heading;
+    s.run(.5,{throttle:1,gear,steer:1});
+    assert.ok(Math.abs(s.v.heading-before)>.8,'low-speed steering reaches a useful angle quickly');
+    assert.equal(Math.sign(s.v.heading-before),gear===1?-1:1,'reverse steering changes yaw in the correct direction');
+    assert.ok(s.v.position.y>.5&&s.v.position.y<.65);s.world.free();
+  }
+  const parked=setup();parked.run(1,{steer:1});assert.equal(parked.v.heading,0);parked.world.free();
 });

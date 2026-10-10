@@ -8,6 +8,8 @@ const blend = (a,b,t)=>a+(b-a)*t;
 export const VEHICLE_TUNING = Object.freeze({
   topSpeed: 120/3.6, burstTopSpeed: 180/3.6, acceleration: 10, burstAcceleration: 50,
   brake: 60, hardBrake: 72, burstSteering: .48,
+  reverseDelay: .12, reverseAcceleration: 8, reverseTopSpeed: 7,
+  steeringGain: 1.5, steeringResponse: 12, steeringRampSpeed: 2.5,
 });
 
 export class Vehicle {
@@ -75,14 +77,14 @@ export class Vehicle {
     if(input.throttle) this.releaseTime=0;
     this.previousThrottle=!!input.throttle;
 
-    // Holding the brake after stopping engages reverse once and keeps it engaged.
-    // Previously speed > .6 reset the hold timer, trapping touch players in a brake/reverse loop.
+    // A brief settled stop engages reverse once; holding brake keeps it engaged.
+    // Include sideways motion so braking out of a drift still stops before reversing.
     if(!input.brake || locked || input.gear===-1) {
       this.brakeHold=0;
       this.autoReverse=false;
-    } else if(!this.autoReverse && Math.abs(speed)<.6) {
+    } else if(!this.autoReverse && Math.hypot(speed,lateral)<.6) {
       this.brakeHold+=dt;
-      if(this.brakeHold>=.65) this.autoReverse=true;
+      if(this.brakeHold>=VEHICLE_TUNING.reverseDelay) this.autoReverse=true;
     } else if(!this.autoReverse) this.brakeHold=0;
     const reverse = input.gear===-1 || this.autoReverse;
     const throttle = this.autoReverse || this.bursting ? 1 : input.throttle;
@@ -96,10 +98,10 @@ export class Vehicle {
       lateral*=Math.max(0,1-dt*12);
       this.turnRate=0;
     } else {
-      const steerScale=clamp(Math.abs(speed)/4,0,1)*(1.55-Math.min(Math.abs(speed)/34,.78));
+      const steerScale=clamp(Math.abs(speed)/VEHICLE_TUNING.steeringRampSpeed,0,1)*(1.55-Math.min(Math.abs(speed)/34,.78))*VEHICLE_TUNING.steeringGain;
       const burstSteer=this.bursting?VEHICLE_TUNING.burstSteering:1;
       const targetTurn=-input.steer*steerScale*(speed<0?-1:1)*(drift?1.45:1)*burstSteer;
-      this.turnRate+=(targetTurn-this.turnRate)*Math.min(1,dt*9);
+      this.turnRate+=(targetTurn-this.turnRate)*Math.min(1,dt*VEHICLE_TUNING.steeringResponse);
       const yaw=this.turnRate*dt;
       this.heading+=yaw;
       if(drift){
@@ -110,15 +112,15 @@ export class Vehicle {
         lateral=lateral*c+oldSpeed*s;
       }
       const acceleration=this.bursting?VEHICLE_TUNING.burstAcceleration:speed<VEHICLE_TUNING.topSpeed?VEHICLE_TUNING.acceleration:0;
-      if(!braking) speed+=throttle*(reverse?(speed>-7?-4.5:0):acceleration)*dt;
+      if(!braking) speed+=throttle*(reverse?(speed>-VEHICLE_TUNING.reverseTopSpeed?-VEHICLE_TUNING.reverseAcceleration:0):acceleration)*dt;
       if(braking) {
         const brake=(this.time-this.lastReverse<.15||this.slide>.3?VEHICLE_TUNING.hardBrake:VEHICLE_TUNING.brake)*dt;
         speed=Math.abs(speed)<brake?0:speed-Math.sign(speed)*brake;
       }
       if(!throttle&&!braking) speed*=Math.max(0,1-dt*.3);
-      if(reverse) speed=Math.max(speed,-7);
+      if(reverse) speed=Math.max(speed,-VEHICLE_TUNING.reverseTopSpeed);
       else if(speed>VEHICLE_TUNING.topSpeed&&!this.bursting) speed-=Math.min(speed-VEHICLE_TUNING.topSpeed,dt*4);
-      speed=clamp(speed,-7,VEHICLE_TUNING.burstTopSpeed);
+      speed=clamp(speed,-VEHICLE_TUNING.reverseTopSpeed,VEHICLE_TUNING.burstTopSpeed);
       lateral*=Math.exp(-dt*(this.impactTime>0?2.2:drift?1.45:12));
       if(drift) lateral=clamp(lateral,-Math.abs(speed)*.8,Math.abs(speed)*.8);
       const planarSpeed=Math.hypot(speed,lateral);
