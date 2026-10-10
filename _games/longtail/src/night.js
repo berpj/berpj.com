@@ -90,6 +90,7 @@ export function createNightWater(scene,mobile){
     .replace('noise.xzy * vec3( 1.5, 1.0, 1.5 )','noise.xzy * vec3( .58, 1.0, .58 )')
     .replace('100.0, 2.0, 0.5','160.0, 0.35, 0.08')
     .replace('float rf0 = 0.3;','float rf0 = 0.025;')
+    .replace('max( dot( eyeDirection, surfaceNormal ), 0.0 )','clamp( dot( eyeDirection, surfaceNormal ), 0.0, 1.0 )')
     .replace('vec3( 0.1 ) + reflectionSample * 0.9 + reflectionSample * specularLight','reflectionSample * 0.82 + specularLight * .12')
     .replace('vec3 outgoingLight = albedo;',`vec3 outgoingLight=albedo;
       for(int i=0;i<${count};i++){

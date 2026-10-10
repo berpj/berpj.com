@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import {EffectComposer} from 'three/addons/postprocessing/EffectComposer.js';
 import {RenderPass} from 'three/addons/postprocessing/RenderPass.js';
-import {UnrealBloomPass} from 'three/addons/postprocessing/UnrealBloomPass.js';
+import {createNightBloom} from './postprocessing.js';
 import {SMAAPass} from 'three/addons/postprocessing/SMAAPass.js';
 import {FXAAPass} from 'three/addons/postprocessing/FXAAPass.js';
 import {OutputPass} from 'three/addons/postprocessing/OutputPass.js';
@@ -115,7 +115,7 @@ async function init(){try{
  renderer=new THREE.WebGLRenderer({canvas:$('#scene'),antialias:false,powerPreference:'high-performance'});renderBudget=new RenderBudget(devicePixelRatio,mobile);renderer.setPixelRatio(renderBudget.ratio);renderer.setSize(innerWidth,innerHeight);renderer.toneMapping=THREE.ACESFilmicToneMapping;renderer.toneMappingExposure=.98;renderer.outputColorSpace=THREE.SRGBColorSpace;
  scene.add(new THREE.HemisphereLight(0xa4bcd6,0x4a3e32,.40));const moon=new THREE.DirectionalLight(0x9cbce2,.44);moon.position.set(-300,600,-400);scene.add(moon);const shore=new THREE.DirectionalLight(0xffd49c,.12);shore.position.set(500,220,150);scene.add(shore);
  world=createWorld(scene,river,piers,mobile);player=createBoat('longtail',0);scene.add(player);const engineLamp=new THREE.PointLight(0xffc991,3.5,7,2);engineLamp.position.set(0,1.65,4.5);player.add(engineLamp);wake=new Wake(scene,mobile);surfaceWakes=new SurfaceWakes(scene,mobile?30:46);makeTraffic();simplifyBoatReflections(world.water,traffic);
- composer=new EffectComposer(renderer);composer.addPass(new RenderPass(scene,camera));composer.addPass(new UnrealBloomPass(new THREE.Vector2(innerWidth,innerHeight),.32,.36,1.1));if(!mobile){smaa=new SMAAPass();composer.addPass(smaa);}composer.addPass(new OutputPass());fxaa=new FXAAPass();fxaa.enabled=mobile;composer.addPass(fxaa);
+ composer=new EffectComposer(renderer);composer.addPass(new RenderPass(scene,camera));composer.addPass(createNightBloom(innerWidth,innerHeight));if(!mobile){smaa=new SMAAPass();composer.addPass(smaa);}composer.addPass(new OutputPass());fxaa=new FXAAPass();fxaa.enabled=mobile;composer.addPass(fxaa);
  const resize=()=>{stillFrame=false;camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight);composer.setSize(innerWidth,innerHeight);};window.addEventListener('resize',resize);$('#scene').addEventListener('webglcontextlost',e=>{e.preventDefault();togglePause(true);toast('Graphics paused. Reload the page to restore the river.',100);});
  frameMeter=createFrameMeter(renderer);ready=true;$('#start').disabled=false;$('#start').innerHTML='MAKE WAVES <span>↗</span>';$('#loading-note').textContent='';previousTime=performance.now();requestAnimationFrame(animate);
  }catch(error){console.error(error);$('#loading-note').textContent=`Unable to launch: ${error.message}. Try a browser with WebGL enabled.`;$('#start').textContent='RELOAD THE RIVER';$('#start').disabled=false;$('#start').onclick=()=>location.reload();}}

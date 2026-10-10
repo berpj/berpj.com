@@ -42,6 +42,7 @@ Scores use `bangkok-longtail:scores:v1` in localStorage, separate from Tuk Tuk. 
 - `src/traffic-visuals.js`: shared near models and inexpensive distant boat silhouettes.
 - `src/render-budget.mjs`: gradual pixel-density adaptation with warmup and hysteresis.
 - `src/reflections.js`: lower-detail boat geometry used only inside the reflection pass.
+- `src/postprocessing.js`: bloom with invalid HDR samples rejected before the blur chain.
 - `src/effects.js`: pooled wake/spray particles.
 - `src/audio.js`: full-length licensed music, engine/horn/water/game audio and independent music/master mute.
 - `src/main.js`: keyboard/touch/gamepad, interpolated chase camera, traffic, UI, minimap and session transitions.
@@ -51,6 +52,8 @@ The fleet has 77 hulls on desktop and 53 on mobile, including tug-led strings of
 SMAA runs before tone mapping on desktop, and FXAA runs after tone mapping on mobile or under sustained GPU pressure. Antialiasing stays enabled in both modes. Reflections render at 512 px desktop / 256 px mobile using boat silhouettes, with small particles and pedestrians excluded. Pixel density adapts gradually to sustained frame-rate pressure without changing traffic or physics. Static geometry and repeated signs are merged; nearby boat detail is retained at 220 m desktop / 160 m mobile. Shore and vessel lights use a fixed pool (three desktop, two mobile); secondary animations update at 24-30 Hz. Pausing stops repeated scene renders.
 
 For local rendering measurements, open `/longtail/?stats` on the Vite dev server. The visible readout includes every reflection and postprocessing draw. It is removed from production builds.
+
+For GPU regression checks, open `/longtail/tests/rendering.html` on the dev server. Its five checks execute the actual shaders, exercise wake UV roundoff and water reflectance boundaries, reproduce NaN propagation in an unprotected bloom pass, and verify that the protected pass contains it without changing normal lighting. These development fixtures are not included in the production build.
 
 ## Geographic and asset scope
 
