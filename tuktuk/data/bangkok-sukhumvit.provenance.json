@@ -1,0 +1,73 @@
+{
+  "source": "OpenStreetMap",
+  "endpoint": "https://api.openstreetmap.org/api/0.6/map?bbox=100.553,13.724,100.577,13.745",
+  "retrievedAt": "2026-10-09T11:47:21.356658+00:00",
+  "osmBaseTimestamp": null,
+  "generator": "openstreetmap-cgimap 2.1.0 (1311 spike-08.openstreetmap.org)",
+  "queryFile": null,
+  "query": "GET /api/0.6/map?bbox=100.553,13.724,100.577,13.745",
+  "sourceFormat": "OSM API 0.6 XML",
+  "sourceSha256": "a511eee84fc7f2041b451e30d64b58c5ccd572ac600bcf9828ee8c5cc5e69806",
+  "outputSha256": "9f9eb1a982af5ecb4c5cefec5d6fc879a42d8b26553e6d7676652180edabd535",
+  "outputBytes": 2793629,
+  "bbox": [
+    100.553,
+    13.724,
+    100.577,
+    13.745
+  ],
+  "geometryExtent": [
+    100.5351909,
+    13.7107042,
+    100.5974831,
+    13.8139385
+  ],
+  "license": "ODbL-1.0",
+  "licenseUrl": "https://opendatacommons.org/licenses/odbl/1-0/",
+  "copyrightUrl": "https://www.openstreetmap.org/copyright",
+  "attribution": "© OpenStreetMap contributors",
+  "transformations": [
+    "Category separation; original stable element IDs and tags retained",
+    "Original WGS84 vertices retained at 7-decimal precision",
+    "Relation member ways joined at identical endpoints without generated vertices",
+    "Boolean drivable flag derived from highway and access tags; tags remain authoritative"
+  ],
+  "limitations": [
+    "OSM is community mapping, not a surveyed or complete reconstruction",
+    "Selection bbox intersects ways; complete ways may extend outside bbox",
+    "Missing road widths, lanes, elevations and building heights require authored game defaults",
+    "Landmarks include only selected mapped nodes; named building tags also identify destinations",
+    "No Google imagery, Street View geometry, or synthetic streets in this source database"
+  ],
+  "quality": {
+    "counts": {
+      "roads": 1523,
+      "paths": 674,
+      "buildings": 4621,
+      "landmarks": 859,
+      "railways": 13,
+      "waterways": 45,
+      "parks": 5
+    },
+    "roadTypes": {
+      "primary": 65,
+      "residential": 405,
+      "service": 1016,
+      "tertiary": 20,
+      "primary_link": 16,
+      "unclassified": 1
+    },
+    "drivableRoads": 986,
+    "roadsWithName": 249,
+    "roadsWithWidth": 3,
+    "roadsWithLanes": 149,
+    "roadsWithLayer": 24,
+    "buildingsWithHeight": 175,
+    "buildingsWithLevels": 931,
+    "unclosedBuildingOutlines": 0,
+    "incompleteBuildingRelationsSkipped": 1
+  },
+  "sourceFile": "tools/world/source/bangkok-sukhumvit.osm.xml.gz",
+  "sourceCompressedBytes": 1091331,
+  "outputGzipBytes": 444558
+}

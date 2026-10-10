@@ -1,0 +1,12 @@
+{
+  "schemaVersion": 1,
+  "description": "Authored game objects, separate from OpenStreetMap source facts.",
+  "tutorialDestination": {
+    "id": "authored-market",
+    "name": "Sukhumvit Market",
+    "fictional": true,
+    "placementRule": "Nearest eastbound Sukhumvit street point approximately 180 meters ahead of the authored starting pose, offset 2.2 meters into its left lane.",
+    "purpose": "A forgiving first delivery on the starting street. Does not assert that a real market exists at this position."
+  },
+  "sourceGeometryChanges": "Road widths and missing building heights are inferred or authored for rendering; original source data is preserved in bangkok-sukhumvit.json."
+}

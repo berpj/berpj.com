@@ -1,0 +1,23 @@
+{
+  "name": "bangkok-tuk-tuk",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite --host 0.0.0.0",
+    "build": "tsc --noEmit && vite build",
+    "preview": "vite preview --host 0.0.0.0",
+    "test": "node --test tests/*.test.mjs"
+  },
+  "dependencies": {
+    "@dimforge/rapier3d-compat": "^0.19.0",
+    "polygon-clipping": "^0.15.7",
+    "three": "^0.180.0"
+  },
+  "devDependencies": {
+    "@types/three": "^0.180.0",
+    "clipper-lib": "^6.4.2",
+    "typescript": "^5.9.3",
+    "vite": "^7.1.9"
+  }
+}

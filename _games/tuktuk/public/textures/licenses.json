@@ -1,0 +1,143 @@
+{
+  "license": "CC0 1.0 Universal",
+  "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+  "providerLicenseUrl": "https://polyhaven.com/license",
+  "downloadedAt": "2026-10-09",
+  "notes": "Color maps are sRGB; normal maps are linear OpenGL tangent-space. Texture assets have been JPEG-recompressed for browser delivery. Surface dimensions are approximate tiling guides.",
+  "textures": [
+    {
+      "id": "asphalt_02",
+      "sourceUrl": "https://polyhaven.com/a/asphalt_02",
+      "authors": {
+        "Rob Tuytel": "All"
+      },
+      "description": "Weathered grey asphalt with coarse aggregate for Bangkok road surfaces.",
+      "tileWidth": "3 m",
+      "files": [
+        {
+          "path": "/textures/asphalt-color.jpg",
+          "map": "color",
+          "dimensions": [
+            1024,
+            1024
+          ],
+          "bytes": 414415,
+          "downloadUrl": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/asphalt_02/asphalt_02_diff_1k.jpg",
+          "sourceMd5": "fa19772d4817754c3efab708c651f5a8",
+          "sha256": "67e7cac202b50a174268289c8fbd1c3345f92cc3b899f29b0b8b8c0a42bc7c92"
+        },
+        {
+          "path": "/textures/asphalt-normal.jpg",
+          "map": "normal",
+          "dimensions": [
+            1024,
+            1024
+          ],
+          "bytes": 548036,
+          "downloadUrl": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/asphalt_02/asphalt_02_nor_gl_1k.jpg",
+          "sourceMd5": "338da8de636ea36133170578cac82e8e",
+          "sha256": "fa72ee719b3381bf0df35c595a106304aae6bde4b6563d120ed0f05ff4d91798"
+        }
+      ],
+      "tileDimensionsMeters": [
+        3.0,
+        3.0
+      ]
+    },
+    {
+      "id": "concrete_wall_005",
+      "sourceUrl": "https://polyhaven.com/a/concrete_wall_005",
+      "authors": {
+        "Dario Barresi": "Processing",
+        "Dimitrios Savva": "Photography"
+      },
+      "description": "Pale weathered concrete plaster with chips and subtle dirt streaks for building walls and urban structures.",
+      "tileWidth": "1.15 m",
+      "files": [
+        {
+          "path": "/textures/concrete-color.jpg",
+          "map": "color",
+          "dimensions": [
+            1024,
+            1024
+          ],
+          "bytes": 101125,
+          "downloadUrl": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/concrete_wall_005/concrete_wall_005_diff_1k.jpg",
+          "sourceMd5": "67c38b069f2d69d0affe75cdce587dc1",
+          "sha256": "6b8f6aaf8291d4cd8cfd4c51fb3df9c84ad0e4774b2158134c11fdf91d962f14"
+        },
+        {
+          "path": "/textures/concrete-normal.jpg",
+          "map": "normal",
+          "dimensions": [
+            1024,
+            1024
+          ],
+          "bytes": 241820,
+          "downloadUrl": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/concrete_wall_005/concrete_wall_005_nor_gl_1k.jpg",
+          "sourceMd5": "40b05a1b9c041c9254e02ce4394a16be",
+          "sha256": "557fdb5a6ca6e0cd8b25261ee9eb9db32586320aa4cffc7939b658d36620d344"
+        }
+      ],
+      "tileDimensionsMeters": [
+        1.15,
+        1.15
+      ]
+    },
+    {
+      "id": "corrugated_iron_02",
+      "sourceUrl": "https://polyhaven.com/a/corrugated_iron_02",
+      "authors": {
+        "Jenelle van Heerden": "Processing",
+        "Sergej Majboroda": "Photography"
+      },
+      "description": "Weathered galvanized corrugated iron for shop shutters and utility roofs.",
+      "tileWidth": "2.7 m",
+      "files": [
+        {
+          "path": "/textures/metal-color.jpg",
+          "map": "color",
+          "dimensions": [
+            1024,
+            1024
+          ],
+          "bytes": 125987,
+          "downloadUrl": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/corrugated_iron_02/corrugated_iron_02_diff_1k.jpg",
+          "sourceMd5": "0437ba7acc3a60e9a00245580ae7e10b",
+          "sha256": "00f500e68dc967ad9f8d001a117efd6f5e322f33e28e2ddfc2c9997df5e971ad"
+        }
+      ],
+      "tileDimensionsMeters": [
+        2.7,
+        2.7
+      ]
+    },
+    {
+      "id": "square_concrete_pavers",
+      "sourceUrl": "https://polyhaven.com/a/square_concrete_pavers",
+      "authors": {
+        "Amal Kumar": "All"
+      },
+      "description": "Worn square concrete pavers for pavement and market forecourts.",
+      "tileWidth": "1.8 m",
+      "files": [
+        {
+          "path": "/textures/paving-color.jpg",
+          "map": "color",
+          "dimensions": [
+            1024,
+            1024
+          ],
+          "bytes": 209582,
+          "downloadUrl": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/square_concrete_pavers/square_concrete_pavers_diff_1k.jpg",
+          "sourceMd5": "8bac51f720962209cd9ac7dcabf791f8",
+          "sha256": "9ba3205c46d49b48badd7baed6b07751e060e38d24862342055aeecb2f53dad8"
+        }
+      ],
+      "tileDimensionsMeters": [
+        1.8,
+        1.8
+      ]
+    }
+  ]
+}

@@ -1,0 +1,96 @@
+{
+  "dataSha256": "9f9eb1a982af5ecb4c5cefec5d6fc879a42d8b26553e6d7676652180edabd535",
+  "bytes": 2793629,
+  "gzipBytes": 444558,
+  "assertions": [
+    "Stable IDs unique",
+    "Coordinate values finite WGS84 longitude/latitude",
+    "Road node IDs exactly match coordinate arrays",
+    "Shared node IDs have identical coordinates",
+    "Building exterior outlines closed"
+  ],
+  "roadSelection": "drivable=true, excludes service=parking_aisle and service=driveway",
+  "selectedRoads": 879,
+  "selectedNodes": 3509,
+  "components": 18,
+  "largestComponentNodes": 3398,
+  "largestComponentRoads": 849,
+  "topComponentSizes": [
+    3398,
+    38,
+    15,
+    15,
+    10,
+    6,
+    3,
+    3,
+    3,
+    2
+  ],
+  "stations": {
+    "Asok": {
+      "id": "node/5391625873",
+      "coordinates": [
+        100.5603571,
+        13.7370432
+      ],
+      "nearestRoadNodeId": 7087816808,
+      "nearestRoadNodeCoordinates": [
+        100.5603199,
+        13.7371553
+      ],
+      "distanceToRoadNodeMeters": 13.1
+    },
+    "Phrom Phong": {
+      "id": "node/5391626093",
+      "coordinates": [
+        100.5697129,
+        13.7304345
+      ],
+      "nearestRoadNodeId": 272554401,
+      "nearestRoadNodeCoordinates": [
+        100.5697135,
+        13.7303787
+      ],
+      "distanceToRoadNodeMeters": 6.2
+    }
+  },
+  "AsokToPhromPhongUndirected": {
+    "reachable": true,
+    "distanceMeters": 1273,
+    "ways": [
+      "way/156985385",
+      "way/1103794216",
+      "way/453635647",
+      "way/25047595",
+      "way/454151813",
+      "way/1156206950",
+      "way/258200369",
+      "way/452045739",
+      "way/749981039",
+      "way/939141447"
+    ]
+  },
+  "AsokToPhromPhongWithOnewayTags": {
+    "reachable": true,
+    "distanceMeters": 1275,
+    "ways": [
+      "way/156985385",
+      "way/1103794216",
+      "way/453652207",
+      "way/1156850720",
+      "way/452046129",
+      "way/749981040",
+      "way/970310343",
+      "way/751471422",
+      "way/693449409",
+      "way/410573497"
+    ]
+  },
+  "notes": [
+    "Graph joins only original shared OSM node IDs; crossing lines do not create synthetic junctions",
+    "Reachability is a source-graph check, not proof of game lane/intersection geometry",
+    "One-way validation uses OSM oneway tags; turn restrictions are not imported",
+    "Disconnected small components include isolated drives; use the largest component for missions"
+  ]
+}
