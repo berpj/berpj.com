@@ -14,7 +14,7 @@ function envelope(context,time,duration,volume,attack=.025){
 }
 
 export function playWarningHorn(context,destination,kind,{pan=0,distance=40}={}){
- const profiles={cruise:138,tug:122,barge:122,ferry:224,electric:256,longtail:328,fishing:380};
+ const profiles={patrol:260,cruise:138,tug:122,barge:122,ferry:224,electric:256,longtail:328,fishing:380};
  const frequency=profiles[kind]||profiles.ferry,voice=voiceGroup(context,destination,pan),t=context.currentTime;
  // A warning is a gameplay cue: remain audible at the longer warning range,
  // including when the sound comes from a tug ahead of its threatened barges.

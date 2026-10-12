@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import {patrolFlash} from '../src/patrols.mjs';
 import {facadeMaterial} from '../src/facade-materials.js';
 import {renderNightFrame} from '../src/render-frame.js';
 import {FullScreenQuad} from 'three/addons/postprocessing/Pass.js';
@@ -208,6 +209,20 @@ check('bridge-mounted strips stay visible against both concrete decks',()=>{
  assert(worst>.5,`strip breaks to ${(worst*100).toFixed(1)}% brightness at ${worstCase}`);
  return `${(worst*100).toFixed(1)}% minimum brightness along the strip, 160 camera positions`;
 });
+check('patrol LEDs alternate in HDR without losing distant visibility or leaking after reset',()=>{
+ const s=new THREE.Scene(),c=new THREE.PerspectiveCamera(62,1,.3,3000),parent=new THREE.Group();s.add(parent);let time=.25;
+ const fixtures=[{a:[-.74,0,0],b:[-.74,0,0],width:.55,color:[3.4,.055,.08],parent,intensity:()=>patrolFlash(time,0)},
+ {a:[.74,0,0],b:[.74,0,0],width:.55,color:[.08,.36,3.4],parent,intensity:()=>patrolFlash(time,1)}];
+ const lights=new VisibleLights(s,fixtures,{dynamic:true,replacePhysical:true});
+ for(const distance of[12,200,800])for(const phase of[.25,.75]){
+  c.position.z=distance;time=phase;lights.update();const image=lightImage(s,c);assert(invalidPixels(target)===0,'invalid flashing light');
+  let red=0,blue=0;for(let i=0;i<image.pixels.length;i+=4){red+=THREE.DataUtils.fromHalfFloat(image.pixels[i]);blue+=THREE.DataUtils.fromHalfFloat(image.pixels[i+2]);}
+  assert(Math.max(red,blue)>1,'distant patrol light disappeared');assert(phase===.25?red>blue*3:blue>red*3,'LED channels do not alternate');
+ }
+ parent.visible=false;lights.update();assert(lightImage(s,c).energy===0,'inactive patrol leaves a floating beacon');
+ lights.geometry.dispose();lights.material.dispose();return 'red/blue at 12, 200 and 800 m, finite pixels, clean reset';
+});
+
 check('main HDR rendering multisamples geometry before postprocessing',()=>{
  const s=new THREE.Scene(),c=new THREE.OrthographicCamera(-1,1,1,-1,.1,10);c.position.z=2;
  const m=new THREE.Mesh(new THREE.PlaneGeometry(1.8,.07),new THREE.MeshBasicMaterial({color:0xffffff}));m.rotation.z=.071;s.add(m);

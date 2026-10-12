@@ -5,7 +5,7 @@ import { createBoat, boatSpecs } from './boats.js';
 // Traffic shares immutable geometry and textures. Only transforms and animation
 // references belong to each vessel; no Object3D is serialized through userData.
 const templates = new Map();
-const variants = { longtail: 3, cruise: 2, ferry: 3, electric: 1, fishing: 2 };
+const variants = { longtail: 3, cruise: 2, ferry: 3, electric: 1, fishing: 2, patrol: 2 };
 const lowMaterials = {
   body: new THREE.MeshStandardMaterial({ vertexColors: true, roughness: .75 }),
   dark: new THREE.MeshStandardMaterial({ vertexColors: true, roughness: .55, metalness: .1 }),
@@ -180,6 +180,20 @@ function distantBoat(kind, variation) {
     b.beam([0, .75, -5.5], [0, 1.78, -6.22], .085, WOOD, 'body');
     b.box([.25, .48, .16], [0, 1.36, -6.13], 0xc76e29);
     b.nav(1.08, 2.06, -2.66, 4.7);
+  } else if (kind === 'patrol') {
+    const paint=variation%2?0x29352f:0x202c38;
+    b.hull(13.8,3.8,.92,.55,paint);
+    b.box([2.9,.26,5.8],[0,1.09,.3],paint);
+    b.box([2.66,1.48,3.85],[0,1.88,.9],paint);
+    b.box([2.32,1.05,.08],[0,2.0,-1.12],0x152633,'dark',[.40,0,0]);
+    for(const side of [-1,1]) {
+      b.box([.045,.91,2.8],[side*1.345,2.08,.65],0x152633,'dark');
+      b.box([.84,1,.78],[side*.91,.94,6.63],paint);
+    }
+    b.box([3.04,.16,4.7],[0,2.72,.65],paint);
+    b.box([2.10,.13,.39],[0,2.87,.65],0x111818,'dark');
+    b.beam([.63,2.8,1.95],[.63,4.1,1.95],.022,paint);
+    b.nav(1.40,2.75,-1.15,2.2);
   } else {
     b.hull(6.5, 1.55, .4, .27, variation % 2 ? 0x503221 : WOOD, 0, true);
     for (const z of [-1.86, .3, 2.08]) b.box([1.07, .08, .30], [0, .36, z], 0xb89260);

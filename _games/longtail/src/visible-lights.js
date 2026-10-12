@@ -62,6 +62,8 @@ export function boatLightFixtures(kind){
   }else if(kind==='longtail'){
     for(const z of[-2.74,2.91])line([-.83,1.99,z],[.83,1.99,z],.048);
     nav(1.08,2.06,-2.66,[0,2.26,4.7]);
+  }else if(kind==='patrol'){
+    nav(1.40,2.75,-1.15,[0,3.7,1.96]);
   }else if(kind==='tug'){
     nav(1.68,4.23,-3.49,[0,1.71,7.42]);
     for(const y of[5.67,6.65])point([0,y,-2.18]);point([0,2.79,.26]);
@@ -79,7 +81,7 @@ export class VisibleLights{
     geometry.setIndex([0,1,2,2,1,3]);geometry.instanceCount=fixtures.length;
     for(const [name,size]of[['lightStart',3],['lightEnd',3],['lightColor',3],['lightWidth',1]]){
       const attribute=new THREE.InstancedBufferAttribute(new Float32Array(fixtures.length*size),size);
-      if(dynamic&&name!=='lightColor')attribute.setUsage(THREE.DynamicDrawUsage);geometry.setAttribute(name,attribute);
+      if(dynamic)attribute.setUsage(THREE.DynamicDrawUsage);geometry.setAttribute(name,attribute);
     }
     fixtures.forEach((f,i)=>geometry.attributes.lightColor.setXYZ(i,...f.color));
     this.material=new THREE.ShaderMaterial({transparent:true,depthWrite:false,depthTest:true,blending:THREE.AdditiveBlending,
@@ -139,12 +141,14 @@ export class VisibleLights{
   update(){
     let previousParent=null,scale=1;
     for(const [i,f]of this.fixtures.entries()){
+      const gain=f.parent?.visible===false?0:(f.intensity?.()??1);
+      this.geometry.attributes.lightColor.setXYZ(i,f.color[0]*gain,f.color[1]*gain,f.color[2]*gain);
       this.pointA.fromArray(f.a);this.pointB.fromArray(f.b);
       if(f.parent){if(f.parent!==previousParent){f.parent.updateWorldMatrix(true,false);scale=this.scale.setFromMatrixScale(f.parent.matrixWorld).x;previousParent=f.parent;}this.pointA.applyMatrix4(f.parent.matrixWorld);this.pointB.applyMatrix4(f.parent.matrixWorld);}else{scale=1;previousParent=null;}
       this.geometry.attributes.lightStart.setXYZ(i,this.pointA.x,this.pointA.y,this.pointA.z);
       this.geometry.attributes.lightEnd.setXYZ(i,this.pointB.x,this.pointB.y,this.pointB.z);
       this.geometry.attributes.lightWidth.setX(i,f.width*scale);
     }
-    for(const name of['lightStart','lightEnd','lightWidth'])this.geometry.attributes[name].needsUpdate=true;
+    for(const name of['lightStart','lightEnd','lightWidth','lightColor'])this.geometry.attributes[name].needsUpdate=true;
   }
 }

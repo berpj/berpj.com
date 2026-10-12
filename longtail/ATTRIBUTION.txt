@@ -1,0 +1,18 @@
+Longtail After Dark: asset attribution
+
+Map data © OpenStreetMap contributors, ODbL 1.0.
+https://www.openstreetmap.org/copyright
+https://opendatacommons.org/licenses/odbl/1-0/
+Derived river/building data, raw extracts and sources: data/README.md
+
+Music: “Exit the Premises” by Kevin MacLeod (incompetech.com).
+Creative Commons Attribution 4.0: https://creativecommons.org/licenses/by/4.0/
+Source: https://incompetech.com/music/royalty-free/index.html?isrc=USUAN1500029
+Compressed to 128 kbps MP3; composition and arrangement unchanged.
+Detailed provenance: audio/provenance.json
+
+Barlow / Barlow Condensed by Jeremy Tribby: fonts/OFL.txt
+Noto Sans Thai by the Noto Project: fonts/NotoSansThai-OFL.txt
+Three.js and Vite: MIT licenses in their source distributions.
+Riverside shophouse artwork: textures/shophouse-provenance.json
+All boat models and other game sound effects are original procedural work.

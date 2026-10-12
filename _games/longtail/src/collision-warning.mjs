@@ -56,6 +56,7 @@ export class TrafficWarnings{
   this.scan=.08;
   const candidates=new Map();
   for(const target of traffic){
+   if(target.active===false)continue;
    const source=target.convoy?.tug||target;
    const course=warningThreat(player,target);
    if(course&&(!candidates.has(source)||course.time<candidates.get(source).time))candidates.set(source,{...course,source});

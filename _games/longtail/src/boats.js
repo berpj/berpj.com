@@ -8,6 +8,7 @@ export const boatSpecs = Object.freeze({
   cruise: Object.freeze({ length: 55, width: 13, mass: 24, maxSpeed: 5.1 }),
   ferry: Object.freeze({ length: 30, width: 5.5, mass: 5.5, maxSpeed: 12 }),
   electric: Object.freeze({ length: 24, width: 7, mass: 7, maxSpeed: 9 }),
+  patrol: Object.freeze({ length: 13.8, width: 3.8, mass: 2.8, maxSpeed: 61 }),
   fishing: Object.freeze({ length: 6.5, width: 1.55, mass: .45, maxSpeed: 3.8 }),
 });
 
@@ -410,14 +411,14 @@ function longtail(variation) {
   return boat;
 }
 
-function shipHull(b, { length, width, height = 1.5, draft = 1.1, color = 'paintWhite', x = 0, stern = .82 }) {
+function shipHull(b, { length, width, height = 1.5, draft = 1.1, color = 'paintWhite', x = 0, stern = .82, deck = 'woodLight', trim = 'gold' }) {
   const beam = t => width * .5 * profile(t, [[0, .025], [.065, .39], [.18, .87], [.3, 1], [.78, 1], [1, stern]]);
   b.add(meshGrid(32, 12, (t, s) => [x + beam(t) * (s * 2 - 1), -draft + (height + draft) * Math.pow(Math.abs(s * 2 - 1), 3), (t - .5) * length]), color);
-  b.add(meshGrid(32, 1, (t, s) => [x + beam(t) * (s * 2 - 1), height, (t - .5) * length]), 'woodLight');
+  b.add(meshGrid(32, 1, (t, s) => [x + beam(t) * (s * 2 - 1), height, (t - .5) * length]), deck);
   b.add(quad([[x - beam(1), height, length / 2], [x + beam(1), height, length / 2], [x + beam(1) * .75, -draft * .45, length / 2], [x - beam(1) * .75, -draft * .45, length / 2]]), color);
   for (const side of [-1, 1]) {
     const points = Array.from({ length: 28 }, (_, i) => { const t = i / 27; return [x + beam(t) * side, height - .27, (t - .5) * length]; });
-    b.curve(points, .065, 'gold', 36);
+    b.curve(points, .065, trim, 36);
     b.curve(points.map(([a, y, z]) => [a * .999, y - .38, z]), .08, 'navy', 36);
   }
   return beam;
@@ -688,7 +689,55 @@ function fishing(variation) {
   return b.finish('single-person wooden fishing boat');
 }
 
-const factories = { longtail, cruise, ferry, electric, fishing };
+function patrol(variation) {
+  const b = new BoatBuilder(), paint = variation % 2 ? 0x29352f : 0x202c38;
+  shipHull(b, {length:13.8,width:3.8,height:.92,draft:.55,color:paint,stern:.78,deck:paint,trim:'rubber'});
+  // Low enclosed wheelhouse, sloped windshield and a long clear foredeck.
+  b.box([2.9,.26,5.8],[0,1.09,.3],paint);
+  b.box([2.66,1.48,3.85],[0,1.88,.9],paint);
+  b.add(quad([[-1.31,1.42,-1.65],[1.31,1.42,-1.65],[1.16,2.63,-1.05],[-1.16,2.63,-1.05]]),'glass');
+  b.cylinder([0,1.42,-1.67],[0,2.64,-1.07],.04,paint);
+  b.box([3.04,.16,4.7],[0,2.72,.65],paint);
+  for(const side of [-1,1]) {
+    for(const z of [-.05,1.42]) b.box([.035,.91,1.21],[side*1.345,2.08,z],'glass');
+    b.box([.065,.09,1.25],[side*1.37,1.50,1.4],'steel');
+    b.box([.04,.09,4.6],[side*1.82,.87,.8],0x88979a);
+    railing(b,side*1.55,1.01,-4.1,-1.8,{height:.53,material:paint,step:1.2});
+    railing(b,side*1.65,.96,3.15,5.35,{height:.55,material:paint,step:1.1});
+    for(const z of [-1.9,2.8,4.3]) tire(b,side*1.87,.48,z,.23,side);
+    cleat(b,side*1.3,1.02,-4.6,.75);
+    // Twin outboards with their lower units in the water.
+    b.box([.84,1.0,.78],[side*.91,.94,6.63],paint);
+    b.box([.72,.10,.72],[side*.91,1.49,6.61],'rubber');
+    b.box([.25,.86,.29],[side*.91,.08,6.86],'rubber');
+    navLamp(b,side*1.40,2.75,-1.15,side);
+    b.add(new THREE.PlaneGeometry(2.1,.26),patrolMarking(variation),[side*1.354,1.35,.7],[0,side*Math.PI/2,0]);
+  }
+  b.box([2.10,.13,.39],[0,2.87,.65],'rubber');
+  // The two LED clusters are drawn by the antialiased fixture batch.
+  b.cylinder([.63,2.82,1.95],[.63,4.1,1.95],.022,'steel');
+  b.cylinder([-.63,2.82,1.75],[-.63,3.55,1.75],.018,'steel');
+  b.box([.7,.12,.19],[.63,3.65,1.95],paint);
+  b.box([.54,.18,.52],[0,1.04,-3.4],paint);
+  b.cylinder([0,1.2,-3.4],[0,1.24,-3.4],.18,'rubber',.18,10);
+  b.ball(.085,[0,3.7,1.96],'warm');
+  thaiFlag(b,-1.25,1.1,5.05,.72);
+  person(b,-.63,1.05,.18,{seated:true,shirt:paint});
+  person(b,.6,.96,3.6,{shirt:paint});
+  return b.finish('river patrol launch');
+}
+function patrolMarking(variation) {
+  const key=`patrol-marking:${variation%2}`;
+  if(materials.has(key))return materials.get(key);
+  if(typeof document==='undefined')return mat('white');
+  const c=document.createElement('canvas');c.width=1024;c.height=128;
+  const ctx=c.getContext('2d');ctx.fillStyle=variation%2?'#29352f':'#202c38';ctx.fillRect(0,0,1024,128);
+  ctx.fillStyle='#b3babc';ctx.font='600 77px "Noto Sans Thai",sans-serif';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText('ตำรวจน้ำ  '+(variation%2?'๒๗':'๑๙'),512,64,970);
+  const map=new THREE.CanvasTexture(c);map.colorSpace=THREE.SRGBColorSpace;
+  const material=new THREE.MeshStandardMaterial({map,roughness:.72});materials.set(key,material);return material;
+}
+
+const factories = { longtail, cruise, ferry, electric, fishing, patrol };
 export function createBoat(kind = 'longtail', variation = 0) {
   const resolved = Object.hasOwn(factories, kind) ? kind : 'longtail';
   const boat = factories[resolved](variation);
@@ -701,6 +750,7 @@ export function createBoat(kind = 'longtail', variation = 0) {
     cruise: [{ position: [0, 8.7, -.5], color: 0xffc78d, intensity: 95, distance: 31 }, { position: [0, 8.6, 15.8], color: 0xffbb85, intensity: 65, distance: 18 }],
     ferry: [{ position: [0, 3.2, 0], color: 0xffd5a0, intensity: 42, distance: 16 }],
     electric: [{ position: [0, 3.45, 0], color: 0xc2ecf5, intensity: 37, distance: 13 }],
+    patrol: [{ position: [-.74,3.05,.65], color: 0xff1838, intensity: 0, distance: 21 }, { position: [.74,3.05,.65], color: 0x1870ff, intensity: 0, distance: 21 }],
     fishing: [{ position: [0, .94, 2.55], color: 0xffbf79, intensity: 5, distance: 4.5 }],
   };
   boat.userData.lightSources = lighting[resolved];

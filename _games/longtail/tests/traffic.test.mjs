@@ -23,7 +23,7 @@ test('all traffic hulls grow together while the player specs and speeds stay unc
 test('denser fleets include both three and four barge convoys on desktop and mobile',()=>{
  for(const mobile of[false,true]){
   const fleet=createFleet(river,specs,mobile);
-  assert.equal(fleet.traffic.length,mobile?73:109);
+  assert.equal(fleet.traffic.length,mobile?75:112);
   assert.deepEqual(fleet.convoys.map(c=>c.barges.length),mobile?[3,4]:[3,4,3]);
   for(const c of fleet.convoys){assert(c.tug.speed<=cargoSpecs.tug.maxSpeed);assert(c.tug.speed<4);for(const b of c.barges)assert.equal(b.speed,c.tug.speed);}
   assert.equal(TRAFFIC_SPEED_SCALE,1.14);
@@ -76,7 +76,7 @@ test('new top speeds retain reliable brakes and continuous collision sampling',(
  assert(stopped&&stopTime<1.5);assert(TUNING.speed===34);
 });
 
-test('both modes launch in mid-river clear of real dock footprints and moving fleets',()=>{
+test('start landmarks launch in mid-river clear of real dock footprints and moving fleets',()=>{
  const piers=buildPiers(river);
  for(const mobile of[false,true]){
   const fleet=createFleet(river,specs,mobile),boats=[0,8].map(i=>{

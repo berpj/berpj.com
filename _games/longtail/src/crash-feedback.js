@@ -1,5 +1,5 @@
 export const CRASH_HOLD_MS=850;
-export const BOAT_NAMES={cruise:'dinner cruise',ferry:'express ferry',electric:'electric ferry',longtail:'long-tail boat',fishing:'fishing boat',tug:'tugboat',barge:'cargo barge'};
+export const BOAT_NAMES={patrol:'river patrol',cruise:'dinner cruise',ferry:'express ferry',electric:'electric ferry',longtail:'long-tail boat',fishing:'fishing boat',tug:'tugboat',barge:'cargo barge'};
 
 export class CrashFeedback{
  constructor(root){

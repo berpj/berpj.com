@@ -1,3 +1,4 @@
+import {PATROL_COUNT,resetPatrols} from './patrols.mjs';
 import {clamp} from './river.mjs';
 
 export const TRAFFIC_SPEED_SCALE = 1.14;
@@ -12,9 +13,13 @@ export function convoyOffsets(count,tugLength=16,bargeLength=48){
   if(count!==3&&count!==4)throw new RangeError('A convoy needs three or four barges');
   return Array.from({length:count},(_,i)=>tugLength/2+28+bargeLength/2+i*(bargeLength+12));
 }
-export function trafficPose(river,distance,lane,direction=1,length=12){
+export function trafficPose(river,distance,lane,direction=1,length=12,smoothLane=false){
   const point=d=>{
     const at=river.sample(d),p=river.sample(d,clamp(lane,-at.width*.34,at.width*.34));
+    if(smoothLane){
+      const before=river.sample(d-8),after=river.sample(d+8),dx=after.x-before.x,dz=after.z-before.z,norm=Math.hypot(dx,dz)||1;
+      const offset=clamp(lane,-at.width*.34,at.width*.34);p.x=at.x-dz/norm*offset;p.z=at.z+dx/norm*offset;
+    }
     const extension=d<0?d:d>river.length?d-river.length:0;
     p.x-=Math.sin(p.heading)*extension;p.z-=Math.cos(p.heading)*extension;return p;
   };
@@ -40,8 +45,10 @@ export function createFleet(river,specs,mobile=false){
     }
     convoys.push(convoy);traffic.push(tug,...convoy.barges);
   }
-  for(const t of traffic)Object.assign(t,trafficPose(river,t.distance,t.lane,t.direction,t.length));
-  return {traffic,convoys};
+  const patrols=Array.from({length:mobile?PATROL_COUNT.mobile:PATROL_COUNT.desktop},(_,i)=>({...actor('patrol',i,-800-i*30,1,20,61),active:false,age:0}));
+  traffic.push(...patrols);
+  for(const t of traffic)Object.assign(t,trafficPose(river,t.distance,t.lane,t.direction,t.length,t.kind==='patrol'));
+  const fleet={traffic,convoys,patrols};resetPatrols(fleet);return fleet;
 }
 export function advanceFleet(fleet,river,dt){
   const {traffic,convoys}=fleet;
@@ -49,11 +56,11 @@ export function advanceFleet(fleet,river,dt){
   // cannot make following traffic brake or surge unpredictably.
   for(const t of traffic){
     t.slow=Math.max(0,t.slow-dt*.6);t.nearCooldown=Math.max(0,t.nearCooldown-dt);
-    if(t.towed)continue;
+    if(t.towed||t.active===false)continue;
     let safeSpeed=t.speed/(1+t.slow);
     if(t.convoy)safeSpeed/=1+Math.max(...t.convoy.barges.map(b=>b.slow))*.15;
     for(const ahead of traffic){
-      if(ahead===t||(t.convoy&&ahead.convoy===t.convoy)||ahead.direction!==t.direction||Math.abs(ahead.lane-t.lane)>(ahead.width+t.width)/2+4)continue;
+      if(ahead.active===false||ahead===t||(t.convoy&&ahead.convoy===t.convoy)||ahead.direction!==t.direction||Math.abs(ahead.lane-t.lane)>(ahead.width+t.width)/2+4)continue;
       const centerGap=(ahead.distance-t.distance)*t.direction;
       if(centerGap<=0)continue;
       const gap=centerGap-(ahead.length+t.length)/2;
@@ -62,8 +69,8 @@ export function advanceFleet(fleet,river,dt){
     t.nextSpeed=safeSpeed;
   }
   for(const t of traffic){
-    if(t.towed)continue;
-    t.actualSpeed=t.nextSpeed;t.distance+=t.actualSpeed*dt*t.direction;
+    if(t.towed||t.active===false)continue;
+    t.actualSpeed=t.kind==='patrol'?Math.max(t.actualSpeed-28*dt,Math.min(t.actualSpeed+12*dt,t.nextSpeed)):t.nextSpeed;t.distance+=t.actualSpeed*dt*t.direction;
     if(t.distance>river.length+OFFSHORE_MARGIN)t.distance=-OFFSHORE_MARGIN;
     if(t.distance< -OFFSHORE_MARGIN)t.distance=river.length+OFFSHORE_MARGIN;
   }
@@ -72,7 +79,8 @@ export function advanceFleet(fleet,river,dt){
     barge.actualSpeed=convoy.tug.actualSpeed;
   });
   for(const t of traffic){
-    Object.assign(t,trafficPose(river,t.distance,t.lane,t.direction,t.length));
+    if(t.active===false)continue;
+    Object.assign(t,trafficPose(river,t.distance,t.lane,t.direction,t.length,t.kind==='patrol'));
     t.vx=-Math.sin(t.heading)*t.actualSpeed;t.vz=-Math.cos(t.heading)*t.actualSpeed;
   }
 }

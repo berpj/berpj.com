@@ -11,8 +11,8 @@ export function installFeedbackControls({approach,audio,crashFeedback,startHornC
  for(const kind of ['ferry','cruise','longtail'])button(`Approach ${kind}`,()=>{status.textContent='Approaching '+kind+'\n';begin(kind);});
  button('Boost toward ferry',()=>{status.textContent='Boosting toward ferry\n';begin('ferry',true);});
  button('Two boats ahead',()=>{status.textContent='Ferry first, cruise behind it\n';begin('ferry',true,{stacked:true});});
- for(const [name,glancing,free]of [['Gentle bump',false,false],['Gentle bump (free)',false,true],['Fast scrape',true,false]])button(name,()=>{
-  const serial=++bumpSerial;minorImpact=false;firstHorn=null;status.textContent=name+' with passenger aboard\n';const verify=bump(glancing,free);
+ for(const [name,glancing]of [['Gentle bump',false],['Fast scrape',true]])button(name,()=>{
+  const serial=++bumpSerial;minorImpact=false;firstHorn=null;status.textContent=name+' with passenger aboard\n';const verify=bump(glancing);
   setTimeout(()=>{if(serial!==bumpSerial)return;const state=verify();report(minorImpact&&Object.values(state).every(Boolean)?`PASS ${name}: run continues, passenger and tips kept`:`FAIL ${name}: impact=${minorImpact}, ${JSON.stringify(state)}`);},1200);
  });
  button('Check H key',()=>{status.textContent='Press H to sound your boat horn.\n';startHornCheck();});
