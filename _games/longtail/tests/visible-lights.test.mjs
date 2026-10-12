@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import * as THREE from 'three';
-import {VisibleLights,collectLightFixture,transformLightFixtures,boatLightFixtures} from '../src/visible-lights.js';
+import {VisibleLights,collectLightFixture,transformLightFixtures,boatLightFixtures,bridgeLightFixtures} from '../src/visible-lights.js';
 import {createTrafficBoat,updateTrafficDetail} from '../src/traffic-visuals.js';
 
 test('rotated bridge strips preserve endpoints, thickness and HDR colour',()=>{
@@ -31,4 +31,16 @@ test('every traffic class retains a finite light rig without adding individual p
     const fixtures=boatLightFixtures(kind);assert(fixtures.length>0);assert(fixtures.length<70);
     for(const fixture of fixtures){assert([...fixture.a,...fixture.b,...fixture.color,fixture.width].every(Number.isFinite));assert(fixture.width>0);}
   }
+});
+
+test('bridge lighting uses narrow continuous strips outside both deck faces',()=>{
+ for(const type of['steel','concrete']){
+  const lights=bridgeLightFixtures(400,19,type);assert.equal(lights.length,type==='steel'?2:4);
+  for(const light of lights){
+   assert.equal(light.b[0]-light.a[0],400);assert(light.width<=.22);
+   assert.equal(light.a[1],light.b[1]);assert.equal(light.a[2],light.b[2]);
+   const upper=light.a[1]>22,face=upper?3:type==='steel'?8.5:14.5;
+   assert(Math.abs(light.a[2])-light.width/2>face,'light is buried in its deck');
+  }
+ }
 });

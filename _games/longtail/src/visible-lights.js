@@ -25,6 +25,20 @@ export function transformLightFixtures(fixtures,matrix){
   return fixtures.map(f=>({...f,a:new THREE.Vector3(...f.a).applyMatrix4(matrix).toArray(),b:new THREE.Vector3(...f.b).applyMatrix4(matrix).toArray(),width:f.width*scale}));
 }
 
+// Bridge edge lights are separate strips, not a shallow emissive slab that
+// vanishes at grazing angles. Keep them outside their supporting deck faces.
+export function bridgeLightFixtures(span,height,type){
+  const steel=type==='steel',fixtures=[];
+  const line=(y,z,width,color)=>fixtures.push({a:[-span/2,y,z],b:[span/2,y,z],width,color});
+  const warm=new THREE.Color(0xffcb83).multiplyScalar(2.5).toArray();
+  const accent=steel?warm:new THREE.Color(0x64c6be).multiplyScalar(1.6).toArray();
+  for(const side of[-1,1]){
+    line(height+.55,side*(steel?9:14.75),.22,accent);
+    if(!steel)line(height+4.75,side*3.25,.2,warm);
+  }
+  return fixtures;
+}
+
 export function boatLightFixtures(kind){
   const fixtures=[],warm=new THREE.Color(0xffcc88).multiplyScalar(3.2).toArray();
   const point=(p,color=warm,width=.2)=>fixtures.push({a:p,b:[...p],width,color});
@@ -92,11 +106,15 @@ export class VisibleLights{
           vec2 offset=(tangent*(position.x*2.-1.)+normal*position.y)*(radius+1.);
           vec4 clip=mix(ca,cb,position.x);
           clip.xy+=offset*2./viewport*clip.w;
-          // Test just in front of the bulb's own surface, not through other hulls.
-          vec3 surfacePosition=mix(a.xyz,b.xyz,position.x);
-          surfacePosition.z=min(-nearPlane*.5,surfacePosition.z+lightWidth*.55+.025);
-          vec4 surface=projectionMatrix*vec4(surfacePosition,1.);
-          clip.z=surface.z/surface.w*clip.w;gl_Position=clip;
+          // The antialiased quad extends past both endpoints. Extrapolate its
+          // depth over that extension too: compressing the original endpoint
+          // depths into a wider quad cuts angled strips into their own deck.
+          float along=position.x+dot(offset,delta)/max(dot(delta,delta),1.);
+          a.z=min(-nearPlane*.5,a.z+lightWidth*.55+.025);
+          b.z=min(-nearPlane*.5,b.z+lightWidth*.55+.025);
+          vec4 surfaceA=projectionMatrix*a,surfaceB=projectionMatrix*b;
+          clip.z=mix(surfaceA.z/surfaceA.w,surfaceB.z/surfaceB.w,along)*clip.w;
+          gl_Position=clip;
         }`,
       fragmentShader:`uniform float fogDensity;uniform float replacePhysical;varying vec2 screenStart;varying vec2 screenEnd;varying vec3 tint;
         varying float radius;varying float nativePixels;varying float depth;

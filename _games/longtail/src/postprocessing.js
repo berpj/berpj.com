@@ -1,5 +1,17 @@
 import {Vector2} from 'three';
+import {EffectComposer} from 'three/addons/postprocessing/EffectComposer.js';
 import {UnrealBloomPass} from 'three/addons/postprocessing/UnrealBloomPass.js';
+
+// Post-process AA cannot recover thin geometry that missed every scene sample.
+// Keep multisampling on the main HDR buffers only, not the water reflection or bloom mip chain.
+export function createNightComposer(renderer){
+  const composer=new EffectComposer(renderer),gl=renderer.getContext();
+  const supported=gl.getInternalformatParameter(gl.RENDERBUFFER,gl.RGBA16F,gl.SAMPLES)||[];
+  const budget=2;
+  const samples=Math.max(0,...Array.from(supported).filter(n=>n<=budget));
+  composer.renderTarget1.samples=composer.renderTarget2.samples=samples;
+  return composer;
+}
 
 export function createNightBloom(width,height){
   const bloom=new UnrealBloomPass(new Vector2(width,height),.32,.36,1.1);

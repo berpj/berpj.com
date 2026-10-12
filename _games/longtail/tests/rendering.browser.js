@@ -1,10 +1,11 @@
 import * as THREE from 'three';
 import {FullScreenQuad} from 'three/addons/postprocessing/Pass.js';
+import {RenderPass} from 'three/addons/postprocessing/RenderPass.js';
 import {UnrealBloomPass} from 'three/addons/postprocessing/UnrealBloomPass.js';
 import {SurfaceWakes} from '../src/effects.js';
 import {createNightWater} from '../src/night.js';
-import {createNightBloom} from '../src/postprocessing.js';
-import {VisibleLights} from '../src/visible-lights.js';
+import {createNightBloom,createNightComposer} from '../src/postprocessing.js';
+import {VisibleLights,bridgeLightFixtures} from '../src/visible-lights.js';
 
 const renderer=new THREE.WebGLRenderer({antialias:false});
 renderer.setSize(128,128);renderer.toneMapping=THREE.NoToneMapping;
@@ -70,7 +71,7 @@ function lightImage(lightScene,lightCamera){
   renderer.setRenderTarget(target);renderer.clear();renderer.render(lightScene,lightCamera);
   const pixels=new Uint16Array(size*size*4);renderer.readRenderTargetPixels(target,0,0,size,size,pixels);
   let energy=0,peak=0;for(let i=0;i<pixels.length;i+=4){const value=THREE.DataUtils.fromHalfFloat(pixels[i]);assert(Number.isFinite(value),'invalid light pixel');energy+=value;peak=Math.max(peak,value);}
-  return {energy,peak};
+  return {energy,peak,pixels};
 }
 check('distant bulbs and strips remain visible at 250 to 2000 metres',()=>{
   const s=new THREE.Scene();s.fog=new THREE.FogExp2(0,.00056);
@@ -97,5 +98,50 @@ check('distant lights respect solid occluders and camera clipping',()=>{
   s.remove(wall);c.position.z=-10;assert(lightImage(s,c).energy===0,'behind-camera bulb is visible');
   lights.geometry.dispose();lights.material.dispose();wall.geometry.dispose();wall.material.dispose();return 'no glow through walls or behind the camera';
 });
+check('bridge-mounted strips stay visible against both concrete decks',()=>{
+ const s=new THREE.Scene(),c=new THREE.PerspectiveCamera(62,1,.3,8000);
+ const deck=new THREE.Group(),material=new THREE.MeshBasicMaterial({color:0});s.add(deck);
+ for(const [y,height,width]of[[19,2.5,29],[23,2,6]]){const m=new THREE.Mesh(new THREE.BoxGeometry(400,height,width),material);m.position.y=y;deck.add(m);}
+ const fixtures=bridgeLightFixtures(400,19,'concrete').filter(f=>f.a[2]>0);
+ const lights=new VisibleLights(s,fixtures);let worst=1,worstCase='';
+ for(const distance of[250,500,1000,2000])for(const angle of[0,.05,.2,.5,1]){
+  deck.rotation.y=angle;deck.updateMatrixWorld();const rotation=new THREE.Matrix4().makeRotationY(angle);
+  lights.fixtures=fixtures.map(f=>({...f,a:new THREE.Vector3(...f.a).applyMatrix4(rotation).toArray(),b:new THREE.Vector3(...f.b).applyMatrix4(rotation).toArray()}));lights.update();
+  c.position.set(0,8,distance);c.lookAt(0,19,0);
+  for(let sub=0;sub<8;sub++){
+   c.position.y=8+sub/8*2*distance*Math.tan(THREE.MathUtils.degToRad(31))/size;
+   const image=lightImage(s,c),columns=[];
+   // The decks legitimately occlude the outside of a widened glow. Measure
+   // continuity along its visible centre, not energy hidden behind concrete.
+   for(let u=.15;u<=.85;u+=.025){
+    const point=new THREE.Vector3(-200+400*u,21.9,14.75).applyMatrix4(rotation).project(c);
+    const x=Math.floor((point.x*.5+.5)*size),y=Math.floor((point.y*.5+.5)*size);
+    if(x<1||x>=size-1||y<5||y>=size-5)continue;
+    let energy=0;for(let py=y-4;py<=y+4;py++)energy+=THREE.DataUtils.fromHalfFloat(image.pixels[(py*size+x)*4]);columns.push(energy);
+   }
+   const ratio=Math.min(...columns)/Math.max(...columns);
+   if(ratio<worst){worst=ratio;worstCase=`${distance}m, yaw ${angle}, subpixel ${sub}`;}
+  }
+ }
+ lights.geometry.dispose();lights.material.dispose();deck.children.forEach(m=>m.geometry.dispose());material.dispose();
+ // The old depth interpolation dropped to 27.4% on this sweep.
+ assert(worst>.5,`strip breaks to ${(worst*100).toFixed(1)}% brightness at ${worstCase}`);
+ return `${(worst*100).toFixed(1)}% minimum brightness along the strip, 160 camera positions`;
+});
+check('main HDR rendering multisamples geometry before postprocessing',()=>{
+ const s=new THREE.Scene(),c=new THREE.OrthographicCamera(-1,1,1,-1,.1,10);c.position.z=2;
+ const m=new THREE.Mesh(new THREE.PlaneGeometry(1.8,.07),new THREE.MeshBasicMaterial({color:0xffffff}));m.rotation.z=.071;s.add(m);
+ const composer=createNightComposer(renderer);composer.renderToScreen=false;composer.addPass(new RenderPass(s,c));composer.setSize(size,size);composer.render();
+ const rt=composer.readBuffer,pixels=new Uint16Array(size*size*4);renderer.readRenderTargetPixels(rt,0,0,size,size,pixels);let partial=0;
+ for(let i=0;i<pixels.length;i+=4){const v=THREE.DataUtils.fromHalfFloat(pixels[i]);assert(Number.isFinite(v),'invalid resolved geometry');if(v>.01&&v<.99)partial++;}
+ if(rt.samples>0)assert(partial>50,`no fractional edge coverage at ${rt.samples} samples`);
+ assert(rt.samples<=2,'sample count exceeds the device budget');
+ composer.setPixelRatio(.75);composer.setSize(size,size);
+ assert(rt.width===96&&rt.height===96,'adaptive resolution did not resize the multisampled buffer');
+ composer.render();assert(invalidPixels(rt)===0,'invalid pixels after resize');
+ const samples=rt.samples;composer.dispose();m.geometry.dispose();m.material.dispose();
+ return `${samples} samples, ${partial} partially covered edge pixels, adaptive resize passed`;
+});
+
 renderer.setRenderTarget(null);target.dispose();renderer.dispose();
 document.querySelector('#result').textContent=failures?`${failures} GPU checks failed`:`All ${checks.children.length} GPU checks passed`;

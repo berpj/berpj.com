@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import {createNightSky,createNightWater} from './night.js';
-import {VisibleLights,collectLightFixture,transformLightFixtures} from './visible-lights.js';
+import {VisibleLights,collectLightFixture,transformLightFixtures,bridgeLightFixtures} from './visible-lights.js';
 import {createRiverfront} from './riverfront.js';
 import {createFountains} from './fountains.js';
 import {mergeGeometries} from 'three/addons/utils/BufferGeometryUtils.js';
@@ -52,7 +52,7 @@ export const LANDMARKS=[
 ];
 export function createWorld(scene,river,piers,mobile){
  const lightFixtures=[];
- const warm=M(0xd3b88b,0xffb34e,.3),stone=M(0x515558),rail=M(0x23323b),glow=new THREE.MeshBasicMaterial({color:new THREE.Color(0xffcb83).multiplyScalar(2.5)}),cyan=new THREE.MeshBasicMaterial({color:new THREE.Color(0x64c6be).multiplyScalar(1.6)});
+ const warm=M(0xd3b88b,0xffb34e,.3),stone=M(0x515558),rail=M(0x23323b),glow=new THREE.MeshBasicMaterial({color:new THREE.Color(0xffcb83).multiplyScalar(2.5)});
  const buildings=new THREE.Group();scene.add(buildings);
  const points=[];for(let d=0;d<river.length;d+=20)points.push(river.sample(d));points.push(river.sample(river.length));
  const banks=side=>points.map(p=>new THREE.Vector2(p.x+p.nx*side*p.width/2,-(p.z+p.nz*side*p.width/2)));
@@ -90,12 +90,12 @@ export function createWorld(scene,river,piers,mobile){
  // Recognisable steel Memorial Bridge, neighbouring Sky Park and concrete Taksin.
  const bridgeColliders=[];const bridgeGroups=[];
  function bridge(lat,lon,name,type){
-  const p=project(lon,lat),n=river.nearest(p.x,p.z),g=new THREE.Group();g.position.set(n.x,0,n.z);g.rotation.y=Math.atan2(-n.nz,n.nx);scene.add(g);const b=new Batch(lightFixtures),span=n.width+200,h=type==='steel'?16:19,steel=M(type==='steel'?0x487962:0x646f7b),accent=type==='steel'?glow:cyan;
-  b.box(steel,0,h,0,span,2.5,type==='steel'?17:29);for(const side of[-1,1]){const z=side*(type==='steel'?9:14.75);b.box(accent,0,h+.55,z,span,.22,.22);if(type==='steel'){
+  const p=project(lon,lat),n=river.nearest(p.x,p.z),g=new THREE.Group();g.position.set(n.x,0,n.z);g.rotation.y=Math.atan2(-n.nz,n.nx);scene.add(g);const b=new Batch(lightFixtures),span=n.width+200,h=type==='steel'?16:19,steel=M(type==='steel'?0x487962:0x646f7b);b.lightFixtures.push(...bridgeLightFixtures(span,h,type));
+  b.box(steel,0,h,0,span,2.5,type==='steel'?17:29);for(const side of[-1,1]){const z=side*(type==='steel'?9:14.75);if(type==='steel'){
    b.box(steel,0,h+13,z,span,1.1,1.1);for(let x=-span/2;x<span/2;x+=30){b.box(steel,x,h+7,z,.7,12,.7);const beam=new THREE.BoxGeometry(1,1,1);const o=new THREE.Object3D();o.position.set(x+15,h+7,z);o.rotation.z=Math.atan2(30,12);o.scale.set(.65,Math.hypot(30,12),.65);o.updateMatrix();b.parts.set(steel,[...(b.parts.get(steel)||[]),beam.applyMatrix4(o.matrix)]);}}
   }
   for(const x of[-n.width*.27,n.width*.27]){b.box(steel,x,h/2,0,8,h,13);const v=new THREE.Vector3(x,0,0).applyMatrix4(g.matrixWorld);g.updateMatrixWorld();g.localToWorld(v.set(x,0,0));bridgeColliders.push({x:v.x,z:v.z,width:9,length:16,heading:g.rotation.y,mass:10000,vx:0,vz:0});}
-  if(type==='concrete'){b.box(steel,0,h+4,0,span,2,6);b.box(glow,0,h+5.1,0,span,.1,5.4);}b.finish(g);
+  if(type==='concrete')b.box(steel,0,h+4,0,span,2,6);b.finish(g);
   const label=sign(name,54,4.8);label.position.set(0,h+3.8,type==='steel'?9:15);g.add(label);bridgeGroups.push({group:g,span,height:h});
  }
  bridge(13.7393,100.4976,'MEMORIAL BRIDGE','steel');bridge(13.73898,100.49851,'CHAO PHRAYA SKY PARK','concrete');bridge(13.7193,100.5121,'TAKSIN BRIDGE','concrete');
