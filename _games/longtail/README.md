@@ -2,7 +2,7 @@
 
 A standalone browser arcade boat game for `https://berpj.com/longtail/`.
 
-Pilot a traditional wooden long-tail through the real Chao Phraya river reach from Wat Arun to Taksin/Sathorn Bridge, near The River condominium. Night Shift offers three minutes plus delivery bonuses; Free Cruise starts at ICONSIAM and has no overall timer. Stop in any golden pier ring to board, deliver passengers to the green ring, and earn tips through near misses and stern slides. Between fares, the minimap shows all available passenger piers and the arrow is hidden. The arrow points directly to the destination during a fare.
+Pilot a traditional wooden long-tail through the real Chao Phraya river reach from Wat Arun to Taksin/Sathorn Bridge, near The River condominium. Night Shift offers three minutes plus delivery bonuses; Free Cruise starts at ICONSIAM and has no overall timer. Stop in any golden pier ring to board, deliver passengers to the green ring, and earn tips through near misses and stern slides. Any collision with a traffic boat ends the run immediately, including in Free Cruise; the fare in progress is lost, while completed fares remain banked. Between fares, the minimap shows all available passenger piers and the arrow is hidden. The arrow points directly to the destination during a fare.
 
 ## Build and run
 
@@ -20,12 +20,12 @@ No backend, API key, subscription or runtime map service. The installed dependen
 ## Controls
 
 - W / up: throttle. S / down: strong brake, then reverse after a short stop.
-- A D / left right: steer. Shift: unlimited boost with reduced steering. Space: stern slide.
+- A D / left right: steer. Shift: unlimited boost with 20% of normal steering. Space: stern slide (unavailable during boost).
 - H: boat horn. R: recover to the channel, three-second penalty. Esc: pause.
 - Touch: horizontal steering pad, throttle, brake/reverse, boost and slide buttons. Holding touch Boost or Slide also applies throttle, so two thumbs are sufficient.
 - Gamepad: left stick, RT throttle, LT brake, A boost, B slide, Y horn, X recover, Start pause.
 
-Scores use `bangkok-longtail:scores:v1` in localStorage, separate from Tuk Tuk. Only naturally completed Night Shifts save top-five scores; Free Cruise and quitting early are unranked. Storage failures do not prevent play. Visibility loss pauses the shift and its audio.
+Scores use `bangkok-longtail:scores:v1` in localStorage, separate from Tuk Tuk. Night Shifts ending at the timer or in a boat collision save top-five scores from completed fares; Free Cruise and quitting early are unranked. Storage failures do not prevent play. Visibility loss pauses the shift and its audio.
 
 ## Implementation
 
@@ -48,7 +48,7 @@ Scores use `bangkok-longtail:scores:v1` in localStorage, separate from Tuk Tuk. 
 - `src/audio.js`: full-length licensed music, engine/horn/water/game audio and independent music/master mute.
 - `src/main.js`: keyboard/touch/gamepad, interpolated chase camera, traffic, UI, minimap and session transitions.
 
-The fleet has 77 hulls on desktop and 53 on mobile, including tug-led strings of three or four cargo barges. Other boats are 18% larger, with matching collision capsules and adjusted convoy spacing; the player boat keeps its original size. Player cruise/boost caps are 34/53 m/s; ordinary traffic runs 14% faster, while loaded convoys stay below 3.2 m/s. Braking scales with the faster player boat. Boost has no screen-glow overlay.
+The fleet has 109 hulls on desktop and 73 on mobile, including tug-led strings of three or four cargo barges. Other boats are 18% larger, with matching collision capsules and adjusted convoy spacing; the player boat keeps its original size. Player cruise/boost caps are 34/53 m/s; ordinary traffic runs 14% faster, while loaded convoys stay below 3.2 m/s. Braking scales with the faster player boat. Boost has no screen-glow overlay.
 
 SMAA runs before tone mapping on desktop, and FXAA runs after tone mapping on mobile or under sustained GPU pressure. Antialiasing stays enabled in both modes. Reflections render at 512 px desktop / 256 px mobile with mipmap filtering and boat silhouettes, with small particles and pedestrians excluded. Pixel density adapts gradually to sustained frame-rate pressure without changing traffic or physics. Static geometry and repeated signs are merged; nearby boat detail is retained at 220 m desktop / 160 m mobile. Visible shore and vessel fixtures use two shared render batches and stay visible beyond the detail range, while respecting building/hull occlusion and atmospheric haze. Near-field illumination uses a fixed pool (three desktop, two mobile); secondary animations update at 24-30 Hz. Pausing stops repeated scene renders.
 

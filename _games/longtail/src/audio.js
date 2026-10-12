@@ -9,8 +9,8 @@ export class RiverAudio{
    const n=c.createBufferSource();n.buffer=buffer;n.loop=true;this.waterGain=c.createGain();this.waterGain.gain.value=0;const f=c.createBiquadFilter();f.type='highpass';f.frequency.value=280;n.connect(f).connect(this.waterGain).connect(this.master);n.start();
   }await this.ctx.resume();if(generation===this.generation&&this.active)this.sync();}catch{this.active=false;}
  }
- sync(){if(this.master)this.master.gain.setTargetAtTime(this.muted||!this.active?0:.5,this.ctx.currentTime,.06);if(this.active&&!this.muted&&this.musicEnabled)this.music.play().catch(()=>{});else this.music.pause();}
- pause(){this.generation++;this.active=false;this.sync();}
+ sync(){if(this.master){this.master.gain.cancelScheduledValues(this.ctx.currentTime);this.master.gain.setTargetAtTime(this.muted||!this.active?0:.5,this.ctx.currentTime,.06);}if(this.active&&!this.muted&&this.musicEnabled)this.music.play().catch(()=>{});else this.music.pause();}
+ pause(tail=0){this.generation++;this.active=false;this.music.pause();if(this.ctx){const t=this.ctx.currentTime;this.engine.gain.setTargetAtTime(0,t,.02);this.waterGain.gain.setTargetAtTime(0,t,.02);this.master.gain.cancelScheduledValues(t);this.master.gain.setTargetAtTime(0,t+tail,.04);}}
  mute(){this.muted=!this.muted;this.sync();return this.muted;}
  musicToggle(){this.musicEnabled=!this.musicEnabled;this.sync();return this.musicEnabled;}
  update(speed,boost){if(!this.ctx||!this.active)return;const t=this.ctx.currentTime,rev=32+Math.abs(speed)*2.6+(boost?16:0);this.oscs.forEach((o,i)=>o.frequency.setTargetAtTime(rev*(i+1),t,.09));this.engine.gain.setTargetAtTime(.3+Math.min(Math.abs(speed)/45,1)*.65,t,.08);this.waterGain.gain.setTargetAtTime(.2+Math.abs(speed)*.035,t,.1);}

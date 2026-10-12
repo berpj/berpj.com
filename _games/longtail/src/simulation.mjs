@@ -1,19 +1,21 @@
 import {clamp,angleDelta} from './river.mjs';
-export const TUNING=Object.freeze({speed:34,boostSpeed:53,acceleration:13.8,boostAcceleration:24,brake:41,reverseSpeed:7,reverseAcceleration:9,steer:1.27,boostSteer:.6});
+export const TUNING=Object.freeze({speed:34,boostSpeed:53,acceleration:13.8,boostAcceleration:24,brake:41,reverseSpeed:7,reverseAcceleration:9,steer:1.27,boostSteer:.2});
 export class BoatPhysics{
  constructor(x=0,z=0,heading=0){this.reset(x,z,heading);}
  reset(x,z,heading){Object.assign(this,{x,z,heading,vx:0,vz:0,yaw:0,speed:0,slip:0,boosting:false,drifting:false,brakeHold:0});}
+ // Start on the bank side of the boarding ring, clear of passing traffic.
+ launch(pier){this.reset(pier.x+pier.nx*14,pier.z+pier.nz*14,pier.heading);}
  update(dt,input={}){
   const steer=clamp(input.steer||0,-1,1),throttle=input.gas?1:0,brake=!!input.brake;
   const fx=-Math.sin(this.heading),fz=-Math.cos(this.heading),rx=Math.cos(this.heading),rz=-Math.sin(this.heading);
   let speed=this.vx*fx+this.vz*fz,lateral=this.vx*rx+this.vz*rz;
   this.boosting=!!input.boost&&throttle>0&&!brake&&speed>1;
-  this.drifting=!!input.drift&&Math.abs(steer)>.15&&Math.abs(speed)>8&&!brake;
+  this.drifting=!this.boosting&&!!input.drift&&Math.abs(steer)>.15&&Math.abs(speed)>8&&!brake;
   if(brake){if(speed>.35){speed=Math.max(0,speed-TUNING.brake*dt);this.brakeHold=0;}else{this.brakeHold+=dt;if(this.brakeHold>.1)speed=Math.max(-TUNING.reverseSpeed,speed-TUNING.reverseAcceleration*dt);else speed=0;}lateral*=Math.exp(-8*dt);}
   else{this.brakeHold=0;if(throttle){const cap=this.boosting?TUNING.boostSpeed:TUNING.speed;speed=speed>cap?Math.max(cap,speed-7*dt):Math.min(cap,speed+(this.boosting?TUNING.boostAcceleration:TUNING.acceleration)*dt);}else speed*=Math.exp(-.38*dt);}
   lateral*=Math.exp(-(this.drifting?.7:this.boosting?2.6:5.3)*dt);
   const turning=-steer*TUNING.steer*clamp(Math.abs(speed)/4,0,1)*(speed<0?-1:1)*(this.boosting?TUNING.boostSteer:1)*(this.drifting?1.48:1);
-  this.yaw+=(turning-this.yaw)*(1-Math.exp(-7*dt));
+  this.yaw+=(turning-this.yaw)*(1-Math.exp(-(this.boosting?12:7)*dt));
   this.vx=fx*speed+rx*lateral;this.vz=fz*speed+rz*lateral;
   this.heading+=this.yaw*dt;this.x+=this.vx*dt;this.z+=this.vz*dt;
   this.speed=this.vx*(-Math.sin(this.heading))+this.vz*(-Math.cos(this.heading));this.slip=this.vx*Math.cos(this.heading)-this.vz*Math.sin(this.heading);
@@ -61,6 +63,11 @@ export class Shift{
   }}else this.dockHold=0;return null;
  }
  stunt(kind){if(this.finished||!this.fare)return 0;this.combo=Math.min(this.combo+1,8);this.comboTime=5;const award=(kind==='slide'?12:20)*this.combo;this.tips+=award;return award;}
+ hitBoat(boat,other){
+  if(this.finished||capsuleContact({...boat,length:12,width:2.5},other).gap>=0)return null;
+  this.finished=true;this.phase='crashed';this.fare=null;this.dockHold=0;this.tips=0;this.combo=0;this.comboTime=0;
+  return {type:'crashed'};
+ }
  crash(){this.combo=0;this.comboTime=0;if(this.fare)this.tips=Math.max(0,this.tips-25);}
 }
 export const RECORD_KEY='bangkok-longtail:scores:v1';

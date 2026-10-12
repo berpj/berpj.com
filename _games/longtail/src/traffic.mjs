@@ -2,7 +2,7 @@ import {clamp} from './river.mjs';
 
 export const TRAFFIC_SPEED_SCALE = 1.14;
 export const TRAFFIC_SIZE_SCALE = 1.18;
-export const FLEET_SIZE = Object.freeze({desktop:64,mobile:44});
+export const FLEET_SIZE = Object.freeze({desktop:96,mobile:64});
 const TYPES=['cruise','ferry','longtail','electric','fishing','ferry','longtail','fishing'];
 const OFFSHORE_MARGIN=900;
 

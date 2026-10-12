@@ -12,7 +12,7 @@ function tick(shift,seconds,body){let event;for(let t=0;t<seconds;t+=dt){const e
 test('OSM reach spans Wat Arun to Taksin and all passenger berths are navigable',()=>{assert(river.length>3500&&river.length<5500);assert.equal(piers.length,12);for(const p of piers){const n=river.nearest(p.x,p.z);assert(Math.abs(n.offset)<n.width/2-10,p.name);assert(n.distance>30&&n.distance<river.length-30,p.name);}});
 test('sample and nearest agree along the complete route',()=>{for(let d=20;d<river.length;d+=37){const p=river.sample(d,18),n=river.nearest(p.x,p.z);assert(Math.abs(n.distance-d)<4);assert(Math.abs(n.offset-18)<2);}});
 test('bank and endpoint collisions keep fast boats inside the reach',()=>{for(const d of[20,600,1800,3000,river.length-20])for(const side of[-1,1]){const p=river.sample(d,side*250),b={...p,vx:p.nx*side*30,vz:p.nz*side*30};river.constrain(b,6);const n=river.nearest(b.x,b.z);assert(Math.abs(n.offset)<n.width/2-4);assert(Number.isFinite(b.vx));}});
-test('boat accelerates smoothly and boost stays unlimited but harder to steer',()=>{const b=run(new BoatPhysics(),12,{gas:true});assert(Math.abs(b.speed-TUNING.speed)<.1);const boost=run(new BoatPhysics(),20,{gas:true,boost:true});assert(Math.abs(boost.speed-TUNING.boostSpeed)<.1);const normal=run(new BoatPhysics(),4,{gas:true,steer:1});const turbo=run(new BoatPhysics(),4,{gas:true,boost:true,steer:1});assert(Math.abs(normal.yaw)>Math.abs(turbo.yaw)*1.4);});
+test('boat accelerates smoothly and boost stays unlimited but harder to steer',()=>{const b=run(new BoatPhysics(),12,{gas:true});assert(Math.abs(b.speed-TUNING.speed)<.1);const boost=run(new BoatPhysics(),20,{gas:true,boost:true});assert(Math.abs(boost.speed-TUNING.boostSpeed)<.1);const normal=run(new BoatPhysics(),4,{gas:true,steer:1});const turbo=run(new BoatPhysics(),4,{gas:true,boost:true,steer:1});assert(Math.abs(turbo.yaw/normal.yaw-.2)<.01);});
 test('braking stops quickly then reverses without a long dead interval',()=>{const b=run(new BoatPhysics(),4,{gas:true});let time=0,stopDistance=0,stopped=false;while(time<2){const before={x:b.x,z:b.z};b.update(dt,{brake:true});if(!stopped)stopDistance+=Math.hypot(b.x-before.x,b.z-before.z);if(b.speed<.1)stopped=true;if(b.speed<-.1)break;time+=dt;}assert(time<1.1);assert(stopDistance<16);run(b,2,{brake:true});assert(b.speed>=-7.01&&b.speed<-6.8);});
 test('powerslides develop visible lateral motion and regrip on release',()=>{const b=run(new BoatPhysics(),3,{gas:true});run(b,.7,{gas:true,steer:1,drift:true});assert(b.drifting);assert(Math.abs(b.slip)>5);run(b,1,{gas:true});assert(Math.abs(b.slip)<1);});
 test('physics is stable across 60 and 120 Hz steps',()=>{const a=new BoatPhysics(),b=new BoatPhysics();for(let i=0;i<600;i++)a.update(1/60,{gas:true,steer:.25});for(let i=0;i<1200;i++)b.update(1/120,{gas:true,steer:.25});assert(Math.hypot(a.x-b.x,a.z-b.z)<1.8);assert(Math.abs(a.heading-b.heading)<.02);});
@@ -27,3 +27,43 @@ test('records keep only valid top five and tolerate unavailable storage',()=>{co
 test('releasing boost decelerates smoothly rather than snapping to cruising speed',()=>{const b=run(new BoatPhysics(),8,{gas:true,boost:true}),before=b.speed;b.update(1/60,{gas:true});assert(before-b.speed<.2);run(b,3,{gas:true});assert(Math.abs(b.speed-TUNING.speed)<.1);});
 test('first Wat Arun fare goes downstream within an approachable distance',()=>{for(const r of[0,.3,.7,.999]){const s=new Shift(piers,()=>r);tick(s,.7,at(piers[0]));assert(s.fare.to.distance>piers[0].distance);assert(s.fare.to.distance-piers[0].distance<1050);}});
 test('simultaneous fare timeout and shift expiration ends the shift immediately',()=>{const s=new Shift(piers);tick(s,.7,at(piers[0]));s.remaining=.001;s.fare.time=.001;assert.equal(s.update(.02,at(piers[0])).type,'ended');assert(s.finished);assert.equal(s.fare,null);});
+
+test('turbo suppresses slide steering and quickly widens an existing turn',()=>{
+ const b=run(new BoatPhysics(),3,{gas:true,steer:1,drift:true});
+ assert(b.drifting);const slidingYaw=Math.abs(b.yaw);
+ run(b,.4,{gas:true,steer:1,boost:true,drift:true});
+ assert(b.boosting);assert(!b.drifting);assert(Math.abs(b.yaw)<slidingYaw*.16);
+ run(b,.6,{gas:true,steer:1});
+ assert(!b.boosting);assert(Math.abs(b.yaw)>TUNING.steer*.98);
+});
+test('any boat hull collision ends ranked and free runs, even at low speed',()=>{
+ for(const free of[false,true])for(const mass of[.45,24]){
+  const s=new Shift(piers);s.reset(free);
+  const player={x:0,z:0,heading:0,vx:0,vz:0};
+  const other={x:1,z:0,heading:0,length:8,width:2,mass,vx:0,vz:0};
+  assert.equal(s.hitBoat(player,{...other,x:5}),null,'near misses are not fatal');
+  assert(!s.finished);
+  assert.deepEqual(s.hitBoat(player,other),{type:'crashed'});
+  assert(s.finished);assert.equal(s.phase,'crashed');
+  assert.equal(s.hitBoat(player,other),null,'only one game-over event');
+  assert.equal(s.update(1,at(piers[0])),null,'no boarding after crashing');
+  s.reset(free);assert(!s.finished);assert.equal(s.phase,'seeking');
+  assert.equal(tick(s,.7,at(piers[0])).type,'pickup');
+ }
+});
+test('crashes discard the active fare but preserve previously banked earnings',()=>{
+ const s=new Shift(piers,()=>.3);
+ tick(s,.7,at(piers[0]));tick(s,.7,at(s.fare.to));
+ const earned=s.earnings;assert(earned>0);assert.equal(s.deliveries,1);
+ tick(s,.7,at(piers[0]));s.stunt('near');s.dockHold=.64;
+ const p={...at(s.fare.to),heading:0};
+ s.hitBoat(p,{...p,length:8,width:2});
+ assert.equal(s.fare,null);assert.equal(s.tips,0);assert.equal(s.combo,0);assert.equal(s.dockHold,0);
+ assert.equal(s.update(.05,p),null,'collision wins over a nearly completed drop-off');
+ assert.equal(s.earnings,earned);assert.equal(s.deliveries,1);
+ assert.equal(s.stunt('near'),0);
+});
+test('bank impacts and recovery penalties do not end a run',()=>{
+ const s=new Shift(piers);tick(s,.7,at(piers[0]));s.stunt('near');s.crash();
+ assert(!s.finished);assert(s.fare);assert.equal(s.combo,0);
+});

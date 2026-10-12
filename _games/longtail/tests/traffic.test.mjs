@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import * as THREE from 'three';
-import {River,angleDelta} from '../src/river.mjs';
+import {River,angleDelta,buildPiers} from '../src/river.mjs';
 import {boatSpecs} from '../src/boats.js';
 import {cargoSpecs} from '../src/cargo.js';
 import {createFleet,advanceFleet,convoyOffsets,trafficPose,TRAFFIC_SPEED_SCALE,TRAFFIC_SIZE_SCALE} from '../src/traffic.mjs';
@@ -23,7 +23,7 @@ test('all traffic hulls grow together while the player specs and speeds stay unc
 test('denser fleets include both three and four barge convoys on desktop and mobile',()=>{
  for(const mobile of[false,true]){
   const fleet=createFleet(river,specs,mobile);
-  assert.equal(fleet.traffic.length,mobile?53:77);
+  assert.equal(fleet.traffic.length,mobile?73:109);
   assert.deepEqual(fleet.convoys.map(c=>c.barges.length),mobile?[3,4]:[3,4,3]);
   for(const c of fleet.convoys){assert(c.tug.speed<=cargoSpecs.tug.maxSpeed);assert(c.tug.speed<4);for(const b of c.barges)assert.equal(b.speed,c.tug.speed);}
   assert.equal(TRAFFIC_SPEED_SCALE,1.14);
@@ -74,4 +74,20 @@ test('new top speeds retain reliable brakes and continuous collision sampling',(
  assert(Math.abs(boat.speed-53)<.1);assert(boat.speed/60<1,'each physics step travels less than a hull width');
  let stopTime=0,stopped=false;for(let i=0;i<180;i++){boat.update(1/60,{brake:true});stopTime+=1/60;if(boat.speed<0){stopped=true;break;}}
  assert(stopped&&stopTime<1.5);assert(TUNING.speed===34);
+});
+
+test('launch berths stay inside boarding rings and clear of both moving fleets',()=>{
+ const piers=buildPiers(river);
+ for(const mobile of[false,true]){
+  const fleet=createFleet(river,specs,mobile),boats=[0,8].map(i=>{
+   const b=new BoatPhysics();b.launch(piers[i]);
+   assert(Math.hypot(b.x-piers[i].x,b.z-piers[i].z)<21);
+   const n=river.nearest(b.x,b.z);assert(Math.abs(n.offset)<n.width/2-6);
+   return {...b,length:12,width:2.5};
+  });
+  for(let time=0;time<240;time+=.5){
+   advanceFleet(fleet,river,.5);
+   for(const b of boats)for(const t of fleet.traffic)assert(capsuleContact(b,t).gap>3,`${t.kind} crosses the launch berth`);
+  }
+ }
 });
