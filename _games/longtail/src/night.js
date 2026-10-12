@@ -22,12 +22,12 @@ export function createNightSky(scene) {
         vec3 d=normalize(direction);float h=max(d.y,0.);
         float moonDot=max(0.,dot(d,moonDirection));
         float horizon=exp(-h*8.);
-        vec3 color=mix(vec3(.008,.014,.025),vec3(.037,.031,.033),horizon);
+        vec3 color=mix(vec3(.012,.022,.039),vec3(.048,.042,.046),horizon);
         color+=vec3(.012,.006,.002)*pow(horizon,3.);
         vec2 p=d.xz/(max(.10,d.y)+.20)*1.5+vec2(time*.0018,0.);
         float cloud=fbm(p+fbm(p*.57)*1.7);
         float veil=smoothstep(.40,.75,cloud)*smoothstep(-.04,.18,d.y);
-        vec3 cloudColor=mix(vec3(.020,.026,.036),vec3(.042,.036,.034),horizon);
+        vec3 cloudColor=mix(vec3(.028,.038,.052),vec3(.055,.048,.045),horizon);
         cloudColor+=vec3(.013,.018,.027)*pow(moonDot,24.);
         color=mix(color,cloudColor,veil*.76);
         float halo=pow(moonDot,180.);
@@ -83,7 +83,7 @@ export function createNightWater(scene,mobile){
   const water=new Water(geometry,{
     textureWidth:mobile?256:512,textureHeight:mobile?256:512,
     waterNormals:riverNormals(),sunDirection:MOON_DIRECTION.clone(),
-    sunColor:0x728496,waterColor:0x051815,distortionScale:1.8,fog:true,clipBias:.002
+    sunColor:0x879bb0,waterColor:0x102928,distortionScale:1.8,fog:true,clipBias:.002
   });
   water.rotation.x=-Math.PI/2;water.position.y=.04;water.name='chao-phraya-water';
   const material=water.material;
