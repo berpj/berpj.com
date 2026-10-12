@@ -18,6 +18,8 @@ import {VisibleLights,boatLightFixtures} from './visible-lights.js';
 import {Controls} from './input.js';
 import {Wake,SurfaceWakes} from './effects.js';
 import {RiverAudio} from './audio.js';
+import {TrafficWarnings} from './collision-warning.mjs';
+import {CrashFeedback,BOAT_NAMES} from './crash-feedback.js';
 import './style.css';
 import {createFrameMeter} from './frame-meter.js';
 import {RenderBudget} from './render-budget.mjs';
@@ -30,7 +32,7 @@ const pauseIcon='<svg viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"
 const brand=`<div class="brand">${boatIcon}<div>BANGKOK<strong>LONGTAIL</strong></div></div>`;
 const keys='<span><b>W A S D</b> Pilot</span><span><b>SHIFT</b> Boost</span><span><b>SPACE</b> Slide</span><span><b>H</b> Horn</span><span><b>R</b> Recover</span>';
 $('#app').innerHTML=`
-<canvas id="scene" aria-label="Bangkok long-tail boat game"></canvas><div id="vignette"></div><div id="flash"></div>
+<canvas id="scene" aria-label="Bangkok long-tail boat game"></canvas><div id="vignette"></div>
 <section id="menu" class="screen">
  <header>${brand}</header>
  <button class="round sound-menu sound-btn" aria-label="Mute sound">${soundIcon}</button>
@@ -56,7 +58,7 @@ function records(){ $('#menu-best').textContent=money(best());$('#hud-best').tex
 records();
 let pendingSize=null;
 let frameMeter,fleet,fleetLights,towlines,renderBudget,smaa,fxaa,stillFrame=false;const boatLightPoint=new THREE.Vector3();
-let mode='menu',free=false,ready=false,shift,boat,river,piers,world,traffic=[],player,renderer,scene,camera,composer,wake,surfaceWakes;let countdown=0,simTime=0,accumulator=0,previousTime=0,arrowRotation=0,hudAge=0,slideTime=0,toastUntil=0,stuntUntil=0,crashCooldown=0,recorded=false,cameraHeading=0;let previous={x:0,z:0,heading:0};const cameraAim=new THREE.Vector3(),cameraPosition=new THREE.Vector3();const audio=new RiverAudio();
+let mode='menu',free=false,ready=false,shift,boat,river,piers,world,traffic=[],player,renderer,scene,camera,composer,wake,surfaceWakes;let countdown=0,simTime=0,accumulator=0,previousTime=0,arrowRotation=0,hudAge=0,slideTime=0,toastUntil=0,stuntUntil=0,crashCooldown=0,recorded=false,cameraHeading=0;let previous={x:0,z:0,heading:0};const cameraAim=new THREE.Vector3(),cameraPosition=new THREE.Vector3();const audio=new RiverAudio();const trafficWarnings=new TrafficWarnings(),crashFeedback=new CrashFeedback($('#app'));
 const controls=new Controls({pause:force=>togglePause(force),horn:()=>audio.horn(),recover:()=>recover()});controls.bind();
 function toast(message,duration=4){$('#toast').textContent=message;toastUntil=simTime+duration;$('#toast').style.opacity='1';}
 function stunt(label,detail){$('#stunt strong').textContent=label;$('#stunt small').textContent=detail;$('#stunt').hidden=false;stuntUntil=simTime+1.4;}
@@ -65,26 +67,27 @@ $('#mode-free').onclick=()=>setMode(true);$('#mode-shift').onclick=()=>setMode(f
 for(const button of document.querySelectorAll('.sound-btn'))button.onclick=()=>{const muted=audio.mute();document.querySelectorAll('.sound-btn').forEach(b=>{b.setAttribute('aria-label',muted?'Unmute sound':'Mute sound');b.style.opacity=muted?'.45':'1';});};
 $('#music-toggle').onclick=()=>{const enabled=audio.musicToggle();$('#music-toggle').textContent=enabled?'ON':'OFF';$('#music-toggle').setAttribute('aria-pressed',String(enabled));};
 $('#pause').onclick=()=>togglePause();$('#resume').onclick=()=>togglePause();$('#recover').onclick=()=>recover();$('#horn').onclick=()=>audio.horn();$('#quit').onclick=()=>endShift('quit');$('#again').onclick=()=>start();$('#back-menu').onclick=()=>menu();$('#start').onclick=()=>start();
-function start(){if(!ready)return;recorded=false;shift.reset(free);const p=piers[free?8:0];boat.launch(river,p);previous={x:boat.x,z:boat.z,heading:boat.heading};cameraHeading=boat.heading;cameraPosition.set(boat.x+Math.sin(boat.heading)*23,12,boat.z+Math.cos(boat.heading)*23);cameraAim.set(boat.x-Math.sin(boat.heading)*30,3,boat.z-Math.cos(boat.heading)*30);wake.clear();surfaceWakes.clear();mode='countdown';countdown=2.5;controls.clear();controls.enabled=false;arrowRotation=0;accumulator=0;slideTime=0;for(const sel of['#menu','#results','#pause-screen'])$(sel).hidden=true;$('#hud').hidden=false;$('#countdown').hidden=false;$('#stunt').hidden=true;$('#navigation').hidden=true;$('#toast').style.opacity='0';audio.start();updateHUD();}
-function menu(){mode='menu';controls.enabled=false;controls.clear();audio.pause();$('#menu').hidden=false;for(const s of['#hud','#results','#pause-screen','#countdown'])$(s).hidden=true;records();}
+function start(){if(!ready)return;crashFeedback.reset();trafficWarnings.reset();crashCooldown=0;recorded=false;shift.reset(free);const p=piers[free?8:0];boat.launch(river,p);previous={x:boat.x,z:boat.z,heading:boat.heading};cameraHeading=boat.heading;cameraPosition.set(boat.x+Math.sin(boat.heading)*23,12,boat.z+Math.cos(boat.heading)*23);cameraAim.set(boat.x-Math.sin(boat.heading)*30,3,boat.z-Math.cos(boat.heading)*30);wake.clear();surfaceWakes.clear();mode='countdown';countdown=2.5;controls.clear();controls.enabled=false;arrowRotation=0;accumulator=0;slideTime=0;for(const sel of['#menu','#results','#pause-screen'])$(sel).hidden=true;$('#hud').hidden=false;$('#countdown').hidden=false;$('#stunt').hidden=true;$('#navigation').hidden=true;$('#toast').style.opacity='0';audio.start();updateHUD();}
+function menu(){crashFeedback.reset();trafficWarnings.reset();mode='menu';controls.enabled=false;controls.clear();audio.pause();$('#menu').hidden=false;for(const s of['#hud','#results','#pause-screen','#countdown'])$(s).hidden=true;records();}
 function togglePause(force=false){if(!ready)return;if((mode==='playing'||mode==='countdown')){modeBeforePause=mode;mode='paused';controls.enabled=false;controls.clear();audio.pause();$('#pause-screen').hidden=false;}else if(mode==='paused'&&!force){mode=modeBeforePause;controls.enabled=mode==='playing';$('#pause-screen').hidden=true;audio.start();previousTime=performance.now();}}
 let modeBeforePause='playing';
 function recover(){if(mode!=='playing')return;const n=river.nearest(boat.x,boat.z),p=river.sample(clamp(n.distance,40,river.length-40));let heading=boat.heading;const tangent=n.heading;if(Math.abs(angleDelta(heading,tangent))<Math.PI/2)heading=tangent;else heading=tangent+Math.PI;boat.reset(p.x,p.z,heading);previous={x:boat.x,z:boat.z,heading:boat.heading};shift.crash();shift.remaining=Math.max(0,shift.remaining-3);toast('Back in the channel · −3 seconds');wake.clear();surfaceWakes.clear();}
-function endShift(reason='timeout'){
+function endShift(reason='timeout',collisionKind){
  if(recorded)return;recorded=true;
  const crashed=reason==='collision',ranked=!shift.free&&reason!=='quit',oldBest=best();
- mode='results';controls.enabled=false;controls.clear();audio.event(crashed?'crash':'delivered');audio.pause(crashed?.4:0);
+ mode=crashed?'crashed':'results';controls.enabled=false;controls.clear();audio.event(crashed?'crash':'delivered');audio.pause(crashed?1.2:0);
+ if(crashed)crashFeedback.impact({fatal:true,kind:collisionKind,onComplete:()=>{mode='results';$('#results').hidden=false;}});
  shift.finished=true;shift.fare=null;shift.dockHold=0;
  if(ranked)scores=saveScore(storage,shift.earnings,shift.deliveries);
  records();
  $('#result-label').textContent=crashed?'BOAT COLLISION':shift.free?'FREE CRUISE · UNRANKED':!ranked?'SHIFT ENDED · UNRANKED':shift.earnings>oldBest?'A NEW PERSONAL BEST':'SHIFT COMPLETE';
- $('#result-title').textContent=crashed?'Run over.':ranked&&shift.earnings>oldBest?'New best score.':'Shift complete.';
- $('#result-reason').hidden=!crashed;$('#result-reason').textContent=crashed?'You hit another boat.':'';
+ $('#result-title').textContent=crashed?'You crashed.':ranked&&shift.earnings>oldBest?'New best score.':'Shift complete.';
+ $('#result-reason').hidden=!crashed;$('#result-reason').textContent=crashed?`Collision: ${BOAT_NAMES[collisionKind]||'boat'}. Run over.`:'';
  $('#result-score').textContent=money(shift.earnings);$('#result-fares').textContent=String(shift.deliveries);$('#result-best').textContent=money(best());
  const list=$('#record-list');list.replaceChildren();
  for(const [i,s]of scores.entries()){const li=document.createElement('li'),b=document.createElement('b');li.textContent=`${i+1}. ${s.deliveries} fares`;b.textContent=money(s.score);li.append(b);list.append(li);}
  if(!scores.length){const li=document.createElement('li');li.textContent='Complete a fare in Night Shift to set a score.';list.append(li);}
- $('#results').hidden=false;$('#pause-screen').hidden=true;$('#countdown').hidden=true;$('#navigation').hidden=true;$('#dock-status').hidden=true;$('#stunt').hidden=true;$('#toast').style.opacity='0';
+ $('#results').hidden=crashed;$('#pause-screen').hidden=true;$('#countdown').hidden=true;$('#navigation').hidden=true;$('#dock-status').hidden=true;$('#stunt').hidden=true;$('#toast').style.opacity='0';
  updateHUD();
 }
 function updateHUD(){if(!shift)return;$('.timer-value').textContent=shift.free?'∞':time(shift.remaining);$('.timer .micro').textContent=shift.free?'FREE CRUISE':'NIGHT SHIFT';$('.timer').classList.toggle('low',!shift.free&&shift.remaining<25);$('#earnings').textContent=money(shift.earnings);$('#deliveries').textContent=`${shift.deliveries} FARE${shift.deliveries===1?'':'S'}`;$('#hud-best').textContent=money(shift.free?best():Math.max(best(),shift.earnings));const fare=shift.fare;
@@ -116,17 +119,17 @@ function step(dt,input){
  previous={x:boat.x,z:boat.z,heading:boat.heading};boat.update(dt,input);let hit=river.constrain(boat,6);
  for(const t of traffic){
   if(Math.hypot(t.x-boat.x,t.z-boat.z)>t.length+18)continue;
-  if(shift.hitBoat(boat,t)){collide(boat,t);endShift('collision');return;}
+  if(shift.hitBoat(boat,t)){collide(boat,t);endShift('collision',t.kind);return;}
   if(Math.abs(boat.speed)>12&&t.nearCooldown===0){const contact=capsuleContact({...boat,length:12,width:2.5},t);if(contact.gap>1.3&&contact.gap<6){const award=shift.stunt('near');t.nearCooldown=8;if(award){audio.event('near');stunt('CLOSE CALL',`+฿ ${award} TIP · ${shift.combo}× COMBO`);}}}
  }
- for(const t of world.bridgeColliders)if(Math.hypot(t.x-boat.x,t.z-boat.z)<28)hit=Math.max(hit,collide(boat,t));crashCooldown=Math.max(0,crashCooldown-dt);if(hit>4&&crashCooldown===0){shift.crash();audio.event('crash');$('#flash').style.opacity=String(Math.min(.23,hit*.012));setTimeout(()=>$('#flash').style.opacity='0',110);crashCooldown=1;const nearEnd=river.nearest(boat.x,boat.z).distance;toast(nearEnd<2||nearEnd>river.length-2?'End of this reach. Turn back along the river.':hit>15?'Big boat. Bigger right of way.':'Watch the paintwork!',3);}
+ for(const t of world.bridgeColliders)if(Math.hypot(t.x-boat.x,t.z-boat.z)<28)hit=Math.max(hit,collide(boat,t));crashCooldown=Math.max(0,crashCooldown-dt);if(hit>4&&crashCooldown===0){shift.crash();audio.impact(false);crashFeedback.impact();crashCooldown=1;const nearEnd=river.nearest(boat.x,boat.z).distance;toast(nearEnd<2||nearEnd>river.length-2?'End of this reach. Turn back along the river.':hit>15?'Big boat. Bigger right of way.':'Watch the paintwork!',3);}
  if(boat.drifting&&Math.abs(boat.slip)>2){slideTime+=dt;if(slideTime>.85){slideTime=0;const award=shift.stunt('slide');if(award){stunt('RIVER SLIDE',`+฿ ${award} TIP · ${shift.combo}× COMBO`);audio.event('slide');}}}else slideTime=0;
  const event=shift.update(dt,boat);if(event){audio.event(event.type);if(event.type==='pickup'){toast(`Next stop: ${event.to.name}. Let’s make waves!`,5);stunt('ALL ABOARD',event.to.name.toUpperCase());}if(event.type==='delivered'){stunt('NICE LANDING',`${money(event.paid)} BANKED · +12 SECONDS`);toast('Fare delivered. Choose any yellow pier for your next passengers.',6);}if(event.type==='late')toast('Missed the boat! Find your next passengers.',5);if(event.type==='ended')endShift();}
  if(Math.abs(boat.speed)>2){wake.emit(boat.x+Math.sin(boat.heading)*6,boat.z+Math.cos(boat.heading)*6,boat.heading,Math.abs(boat.speed),boat.boosting?1:.4);if(boat.drifting)wake.emit(boat.x,boat.z,boat.heading,Math.abs(boat.speed),.8);}
 }
 function drawFrame(frameDt=0,ratio=null){renderNightFrame(renderer,composer,{ratio,size:pendingSize,smaa,fxaa,frameMeter,frameDt});pendingSize=null;}
-function animate(now){requestAnimationFrame(animate);const frameDt=(now-previousTime)/1000,dt=Math.min(frameDt||0,.05);previousTime=now;if(!ready)return;const input=controls.read();if(mode==='paused'||mode==='results'){if(!stillFrame){drawFrame();stillFrame=true;}return;}stillFrame=false;simTime+=dt;if(mode==='countdown'){countdown-=dt;$('#countdown').textContent=countdown>1.5?'3':countdown>.7?'2':countdown>.1?'1':'GO!';if(countdown<=0){mode='playing';controls.enabled=true;$('#countdown').hidden=true;toast('Stop at any golden pier. Shift for boost. Space to swing the stern.',6);}}
- stepTraffic(dt);if(mode==='playing'){accumulator+=dt;let steps=0;while(mode==='playing'&&accumulator>=1/60&&steps++<4){step(1/60,input);accumulator-=1/60;}if(mode==='playing')audio.update(boat.speed,boat.boosting);else accumulator=0;}
+function animate(now){requestAnimationFrame(animate);const frameDt=(now-previousTime)/1000,dt=Math.min(frameDt||0,.05);previousTime=now;if(!ready)return;const input=controls.read();if(mode==='paused'||mode==='results'||mode==='crashed'){if(!stillFrame){drawFrame();stillFrame=true;}return;}stillFrame=false;simTime+=dt;if(mode==='countdown'){countdown-=dt;$('#countdown').textContent=countdown>1.5?'3':countdown>.7?'2':countdown>.1?'1':'GO!';if(countdown<=0){mode='playing';controls.enabled=true;$('#countdown').hidden=true;toast('Stop at any golden pier. Shift for boost. Space to swing the stern.',6);}}
+ stepTraffic(dt);if(mode==='playing'){accumulator+=dt;let steps=0;while(mode==='playing'&&accumulator>=1/60&&steps++<4){step(1/60,input);accumulator-=1/60;}if(mode==='playing'){audio.update(boat.speed,boat.boosting);const warning=trafficWarnings.update(dt,boat,traffic,cameraHeading);if(warning)audio.warningHorn(warning.source.kind,warning);}else accumulator=0;}
  const fraction=mode==='playing'?clamp(accumulator/(1/60),0,1):1;
  if(mode!=='menu'){
   const x=THREE.MathUtils.lerp(previous.x,boat.x,fraction),z=THREE.MathUtils.lerp(previous.z,boat.z,fraction),heading=previous.heading+angleDelta(boat.heading,previous.heading)*fraction;
@@ -158,5 +161,14 @@ async function init(){try{
  composer=createNightComposer(renderer);composer.addPass(new RenderPass(scene,camera));composer.addPass(createNightBloom(innerWidth,innerHeight));if(!mobile){smaa=new SMAAPass();composer.addPass(smaa);}composer.addPass(new OutputPass());fxaa=new FXAAPass();fxaa.enabled=mobile;composer.addPass(fxaa);
  const resize=()=>{stillFrame=false;camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();pendingSize={width:innerWidth,height:innerHeight};};window.addEventListener('resize',resize);$('#scene').addEventListener('webglcontextlost',e=>{e.preventDefault();togglePause(true);toast('Graphics paused. Reload the page to restore the river.',100);});
  frameMeter=createFrameMeter(renderer);ready=true;$('#start').disabled=false;$('#start').textContent='PLAY';$('#loading-note').textContent='';previousTime=performance.now();requestAnimationFrame(animate);
+ if(import.meta.env.DEV&&location.pathname.endsWith('/tests/feedback.html')){
+  const {installFeedbackControls}=await import('../tests/feedback-controls.js');
+  installFeedbackControls({audio,crashFeedback,approach(kind){
+   setMode(true);start();countdown=.01;const target=traffic.find(t=>t.kind===kind),d=piers[8].distance;
+   Object.assign(target,{distance:d+80,direction:-1,lane:0,speed:9,actualSpeed:9,slow:0});stepTraffic(0);
+   boat.heading=Math.atan2(boat.x-target.x,boat.z-target.z);boat.vx=-Math.sin(boat.heading)*34;boat.vz=-Math.cos(boat.heading)*34;boat.speed=34;controls.touch.gas=true;
+   previous={x:boat.x,z:boat.z,heading:boat.heading};cameraHeading=boat.heading;
+  }});
+ }
  }catch(error){console.error(error);$('#loading-note').textContent=`Unable to launch: ${error.message}. Try a browser with WebGL enabled.`;$('#start').textContent='RETRY';$('#start').disabled=false;$('#start').onclick=()=>location.reload();}}
 init();

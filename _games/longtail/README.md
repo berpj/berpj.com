@@ -48,7 +48,9 @@ Scores use `bangkok-longtail:scores:v1` in localStorage, separate from Tuk Tuk. 
 - `src/reflections.js`: lower-detail boat geometry used only inside the reflection pass.
 - `src/postprocessing.js`: bloom with invalid HDR samples rejected before the blur chain.
 - `src/effects.js`: pooled wake/spray particles.
-- `src/audio.js`: full-length licensed music, engine/horn/water/game audio and independent music/master mute.
+- `src/audio.js` / `src/sound-effects.js`: licensed music, engine/water audio, directional vessel horns and layered hull-impact sounds with independent music/master mute.
+- `src/collision-warning.mjs`: hull-contact prediction, confirmed approach warnings and per-vessel/fleet horn cooldowns. Barge warnings sound from their tug.
+- `src/crash-feedback.js`: brief impact freeze, dark red edge vignette and crash caption before the results, cleared on retry.
 - `src/main.js`: keyboard/touch/gamepad, interpolated chase camera, traffic, UI, minimap and session transitions.
 
 The fleet has 109 hulls on desktop and 73 on mobile, including tug-led strings of three or four cargo barges. Other boats are 18% larger, with matching collision capsules and adjusted convoy spacing; the player boat keeps its original size. Player cruise/boost caps are 34/53 m/s; ordinary traffic runs 14% faster, while loaded convoys stay below 3.2 m/s. Braking scales with the faster player boat. Boost has no screen-glow overlay.
@@ -66,3 +68,9 @@ River centreline and widths are derived from OpenStreetMap, with source queries/
 The intended bridge is Taksin/Sathorn, which connects to Krung Thon Buri Road beside The River; it is not Krung Thon Bridge farther north.
 
 The music is “Exit the Premises” by Kevin MacLeod, CC BY 4.0. Full credit, source links and transcode details are visible in `public/credits.html` and `public/audio/provenance.json`. Barlow and Noto Sans Thai fonts are SIL OFL. Riverside shop texture is reused generated art from the existing game, with provenance bundled. All boats, other building surfaces and sound effects are original procedural work.
+
+## Collision feedback checks
+
+`/longtail/tests/feedback.html` provides deterministic ferry, cruise and long-tail approaches using the actual fleet, physics, audio and result transitions. Warning horns look up to 2.8 seconds ahead, confirm the trajectory over two scans and have a 6.5-second per-vessel cooldown plus a 1.2-second fleet-wide gap. Quiet passing, receding and stationary-player cases are covered in Node tests. The fixture's Audio checks render all vessel profiles and impacts offline to verify finite samples, headroom, stereo direction, silence after decay and cancellation. `/longtail/tests/feedback-mobile.html` runs the same game in a 390 px phone viewport. Fixture controls are gated to development and removed from production.
+
+Fatal collisions freeze the impact view for 850 ms with a dark red edge vignette, a CRASHED caption and a hull crack/thud/splash. Results then appear over the frozen river, retaining the damage edges. Bank impacts use a shorter fading vignette without ending the run. Reduced-motion mode keeps the edge effect static. Retry and the menu clear the effect and cancel any remaining warning/impact voices.
