@@ -2,7 +2,8 @@ import {capsuleContact} from './simulation.mjs';
 
 // Predict contact using the same hulls as the simulation, including the full
 // length of a cruise ship or barge. Re-evaluate as either vessel changes course.
-export function collisionCourse(player,other,horizon=3.8){
+// Keep the warning local: a confirmed approach gets about 2.3 seconds to react.
+export function collisionCourse(player,other,horizon=2.5){
  const speed=Math.hypot(player.vx,player.vz);
  if(speed<3)return null;
  const a={...player,length:12,width:2.5},dx=other.x-a.x,dz=other.z-a.z;
