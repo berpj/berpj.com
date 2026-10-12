@@ -71,7 +71,7 @@ async function checkMix(){
    const source=c.createBufferSource(),gain=c.createGain();source.buffer=music;gain.gain.value=.64;source.connect(gain).connect(ambience);source.start(0,35);source.stop(3);
    const filter=c.createBiquadFilter();filter.type='lowpass';filter.frequency.value=1000;filter.connect(ambience);
    for(const [i,level]of [.12,.045,.025].entries()){const o=c.createOscillator(),g=c.createGain();o.type=i===0?'sawtooth':'triangle';o.frequency.value=186*(i+1);g.gain.value=level*.43;o.connect(g).connect(filter);o.start();o.stop(3);}
-   const n=c.createBufferSource(),f=c.createBiquadFilter(),g=c.createGain();n.buffer=water;f.type='highpass';f.frequency.value=280;g.gain.value=.2+53*.035;n.connect(f).connect(g).connect(ambience);n.start();
+   const n=c.createBufferSource(),f=c.createBiquadFilter(),g=c.createGain();n.buffer=water;f.type='highpass';f.frequency.value=280;g.gain.value=.06+53*.009;n.connect(f).connect(g).connect(ambience);n.start();
   }
   if(horn)playWarningHorn(c,master,kind,{pan,distance});
   const buffer=await c.startRendering();return [buffer.getChannelData(0),buffer.getChannelData(1)];
