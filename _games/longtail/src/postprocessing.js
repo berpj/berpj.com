@@ -1,6 +1,17 @@
 import {Vector2} from 'three';
 import {EffectComposer} from 'three/addons/postprocessing/EffectComposer.js';
 import {UnrealBloomPass} from 'three/addons/postprocessing/UnrealBloomPass.js';
+import {FXAAPass} from 'three/addons/postprocessing/FXAAPass.js';
+
+export function createNightFXAA(){
+  const pass=new FXAAPass();
+  // Retain edge antialiasing, but avoid averaging away fine wood, wake and
+  // window detail. MSAA already supplies partial coverage for geometry edges.
+  pass.material.fragmentShader=pass.material.fragmentShader.replace(
+    'float _SubpixelBlending = 1.0;', 'float _SubpixelBlending = 0.35;'
+  );
+  return pass;
+}
 
 // Post-process AA cannot recover thin geometry that missed every scene sample.
 // Keep multisampling on the main HDR buffers only, not the water reflection or bloom mip chain.

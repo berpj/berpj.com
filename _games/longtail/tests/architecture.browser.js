@@ -1,11 +1,10 @@
 import * as THREE from 'three';
 import {RenderPass} from 'three/addons/postprocessing/RenderPass.js';
 import {OutputPass} from 'three/addons/postprocessing/OutputPass.js';
-import {FXAAPass} from 'three/addons/postprocessing/FXAAPass.js';
 import {createWorld} from '../src/world.js';
 import {River,buildPiers,project} from '../src/river.mjs';
 import {MOON_DIRECTION} from '../src/night.js';
-import {createNightComposer,createNightBloom} from '../src/postprocessing.js';
+import {createNightComposer,createNightBloom,createNightFXAA} from '../src/postprocessing.js';
 import {renderNightFrame} from '../src/render-frame.js';
 
 await document.fonts.load('600 32px "Noto Sans Thai"');
@@ -16,7 +15,7 @@ const scene=new THREE.Scene();scene.background=new THREE.Color(0x0a101b);scene.f
 const camera=new THREE.PerspectiveCamera(62,innerWidth/innerHeight,.3,8000);camera.layers.enable(1);
 const renderer=new THREE.WebGLRenderer({antialias:false});renderer.setPixelRatio(Math.min(devicePixelRatio,1.5));renderer.setSize(innerWidth,innerHeight);renderer.toneMapping=THREE.ACESFilmicToneMapping;renderer.toneMappingExposure=1.15;document.body.prepend(renderer.domElement);
 scene.add(new THREE.HemisphereLight(0xa4bcd6,0x4a3e32,.82));const moon=new THREE.DirectionalLight(0x9cbce2,.62);moon.position.copy(MOON_DIRECTION).multiplyScalar(1000);scene.add(moon);const shore=new THREE.DirectionalLight(0xffd49c,.18);shore.position.set(500,220,150);scene.add(shore);
-const world=createWorld(scene,river,piers,false),composer=createNightComposer(renderer);composer.addPass(new RenderPass(scene,camera));composer.addPass(createNightBloom(innerWidth,innerHeight));composer.addPass(new OutputPass());composer.addPass(new FXAAPass());
+const world=createWorld(scene,river,piers,false),composer=createNightComposer(renderer);composer.addPass(new RenderPass(scene,camera));composer.addPass(createNightBloom(innerWidth,innerHeight));composer.addPass(new OutputPass());composer.addPass(createNightFXAA());
 const shift={finished:true},status=document.querySelector('#status');
 function addButton(label,fn){const b=document.createElement('button');b.textContent=label;b.onclick=fn;document.querySelector('#views').append(b);return b;}
 function landmark(id){const l=world.landmarks.find(l=>l.kind===id),p=river.sample(l.distance+170,-l.side*river.sample(l.distance).width*.28);camera.position.set(p.x,9,p.z);camera.lookAt(l.x,Math.min((l.bounds.max.y)*.4,76),l.z);status.textContent=l.name+' · mapped footprint, authored facade';draw();}

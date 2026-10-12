@@ -26,5 +26,5 @@
 .crashed #results .dialog{background:#211a20f5;border-color:#b7574d77;box-shadow:0 15px 80px #0008}
 .crashed #result-label,.crashed #result-title{color:#ffad97}
 @keyframes crash-impact{0%{opacity:1}24%{opacity:.72}55%{opacity:1}100%{opacity:.85}}
-@keyframes bank-impact{0%{opacity:.7}100%{opacity:0}}
-@media(prefers-reduced-motion:reduce){.damage-overlay.fatal{animation:none;opacity:.85}.damage-overlay.minor{animation:none;opacity:.5}}
+@keyframes bank-impact{0%{opacity:calc(.7 * var(--impact-opacity,1))}100%{opacity:0}}
+@media(prefers-reduced-motion:reduce){.damage-overlay.fatal{animation:none;opacity:.85}.damage-overlay.minor{animation:none;opacity:calc(.5 * var(--impact-opacity,1))}}

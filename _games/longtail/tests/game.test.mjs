@@ -36,28 +36,62 @@ test('turbo suppresses slide steering and quickly widens an existing turn',()=>{
  run(b,.6,{gas:true,steer:1});
  assert(!b.boosting);assert(Math.abs(b.yaw)>TUNING.steer*.98);
 });
-test('any boat hull collision ends ranked and free runs, even at low speed',()=>{
+test('light boat bumps survive in ranked and free runs without losing the fare',()=>{
+ for(const free of[false,true])for(const mass of[.45,24,65])for(const speed of[0,2,6]){
+  const s=new Shift(piers);s.reset(free);tick(s,.7,at(piers[0]));s.stunt('near');
+  const fare=s.fare,tips=s.tips,remaining=s.remaining;
+  const player={x:0,z:0,heading:0,vx:speed,vz:0};
+  const other={x:2,z:0,heading:0,length:8,width:2,mass,vx:0,vz:0};
+  assert.equal(s.hitBoat(player,{...other,x:5}),null,'near misses do not resolve as impacts');
+  assert.equal(s.hitBoat(player,other).type,'bumped');
+  assert(!s.finished);assert.equal(s.phase,'carrying');assert.equal(s.fare,fare);assert.equal(s.tips,tips);assert.equal(s.remaining,remaining);
+  assert(capsuleContact({...player,length:12,width:2.5},other).gap>=0,'hulls are separated');
+  assert(player.vx<=speed&&Number.isFinite(player.vx));
+  assert.equal(tick(s,.7,at(fare.to)).type,'delivered','the passenger can still be delivered');
+ }
+});
+test('boost-speed glancing scrapes preserve forward motion',()=>{
+ const s=new Shift(piers),player={x:0,z:0,heading:0,vx:2,vz:-53};
+ const other={x:2,z:0,heading:0,length:55,width:2,mass:24,vx:0,vz:-5};
+ const event=s.hitBoat(player,other);assert.equal(event.type,'bumped');assert(!s.finished);
+ assert.equal(player.vz,-53);assert.equal(player.speed,53);assert(player.vx<=0,'only the inward velocity bounces');
+ assert.equal(s.hitBoat(player,other),null,'a resolved scrape is not hit again');
+});
+test('boats travelling together can touch gently at high world speed',()=>{
+ const s=new Shift(piers),player={x:0,z:0,heading:0,vx:0,vz:-34};
+ const other={x:0,z:-9.9,heading:0,length:8,width:2,mass:24,vx:0,vz:-32};
+ assert.equal(s.hitBoat(player,other).type,'bumped');assert(!s.finished);
+ assert(player.speed>30,'a small relative impact must not stop a fast convoy');
+});
+test('hard head-on crashes end ranked and free runs once',()=>{
  for(const free of[false,true])for(const mass of[.45,24]){
   const s=new Shift(piers);s.reset(free);
-  const player={x:0,z:0,heading:0,vx:0,vz:0};
-  const other={x:1,z:0,heading:0,length:8,width:2,mass,vx:0,vz:0};
-  assert.equal(s.hitBoat(player,{...other,x:5}),null,'near misses are not fatal');
-  assert(!s.finished);
-  assert.deepEqual(s.hitBoat(player,other),{type:'crashed'});
-  assert(s.finished);assert.equal(s.phase,'crashed');
+  const player={x:0,z:0,heading:0,vx:0,vz:-53};
+  const other={x:0,z:-9.9,heading:Math.PI,length:8,width:2,mass,vx:0,vz:20};
+  assert.equal(s.hitBoat(player,other).type,'crashed');assert(s.finished);assert.equal(s.phase,'crashed');
   assert.equal(s.hitBoat(player,other),null,'only one game-over event');
   assert.equal(s.update(1,at(piers[0])),null,'no boarding after crashing');
-  s.reset(free);assert(!s.finished);assert.equal(s.phase,'seeking');
-  assert.equal(tick(s,.7,at(piers[0])).type,'pickup');
+  s.reset(free);assert(!s.finished);assert.equal(tick(s,.7,at(piers[0])).type,'pickup');
  }
+});
+test('a heavier hull is more dangerous at the same impact speed',()=>{
+ const player={x:0,z:0,heading:0,vx:20,vz:0},other={x:2,z:0,heading:0,length:8,width:2,vx:0,vz:0};
+ assert.equal(new Shift(piers).hitBoat({...player},{...other,mass:.45}).type,'bumped');
+ assert.equal(new Shift(piers).hitBoat({...player},{...other,mass:24}).type,'crashed');
+});
+test('a minor bump does not protect against an immediately following hard hit',()=>{
+ const s=new Shift(piers),player={x:0,z:0,heading:0,vx:2,vz:0};
+ assert.equal(s.hitBoat(player,{x:2,z:0,heading:0,length:8,width:2,mass:24,vx:0,vz:0}).type,'bumped');
+ player.vz=-53;
+ assert.equal(s.hitBoat(player,{x:player.x,z:-9.9,heading:Math.PI,length:8,width:2,mass:24,vx:0,vz:10}).type,'crashed');
 });
 test('crashes discard the active fare but preserve previously banked earnings',()=>{
  const s=new Shift(piers,()=>.3);
  tick(s,.7,at(piers[0]));tick(s,.7,at(s.fare.to));
  const earned=s.earnings;assert(earned>0);assert.equal(s.deliveries,1);
  tick(s,.7,at(piers[0]));s.stunt('near');s.dockHold=.64;
- const p={...at(s.fare.to),heading:0};
- s.hitBoat(p,{...p,length:8,width:2});
+ const p={...at(s.fare.to),heading:0,vz:-34};
+ s.hitBoat(p,{...p,z:p.z-9.9,heading:Math.PI,length:8,width:2,mass:24,vz:10});
  assert.equal(s.fare,null);assert.equal(s.tips,0);assert.equal(s.combo,0);assert.equal(s.dockHold,0);
  assert.equal(s.update(.05,p),null,'collision wins over a nearly completed drop-off');
  assert.equal(s.earnings,earned);assert.equal(s.deliveries,1);

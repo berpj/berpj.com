@@ -1,5 +1,5 @@
 import {clamp,angleDelta} from './river.mjs';
-export const TUNING=Object.freeze({speed:34,boostSpeed:53,acceleration:13.8,boostAcceleration:24,brake:41,reverseSpeed:7,reverseAcceleration:9,steer:1.05,boostSteer:.254});
+export const TUNING=Object.freeze({speed:34,boostSpeed:53,acceleration:13.8,boostAcceleration:24,brake:41,reverseSpeed:7,reverseAcceleration:9,steer:1.05,boostSteer:.254,fatalImpact:14});
 export class BoatPhysics{
  constructor(x=0,z=0,heading=0){this.reset(x,z,heading);}
  reset(x,z,heading){Object.assign(this,{x,z,heading,vx:0,vz:0,yaw:0,speed:0,slip:0,boosting:false,drifting:false,brakeHold:0});}
@@ -33,12 +33,14 @@ export function capsuleContact(a,b){
  if(d<.001){dx=a.x-b.x;dz=a.z-b.z;d=Math.hypot(dx,dz);if(d<.001){dx=Math.cos(a.heading);dz=-Math.sin(a.heading);d=1;}}
  return {gap,nx:dx/d,nz:dz/d};
 }
-export function collide(player,other){
- const c=capsuleContact({...player,length:12,width:2.5},other);if(c.gap>=0)return 0;
+export function collide(player,other,c=capsuleContact({...player,length:12,width:2.5},other)){
+ if(c.gap>=0)return 0;
  player.x+=c.nx*(-c.gap+.02);player.z+=c.nz*(-c.gap+.02);
  const rel=(player.vx-other.vx)*c.nx+(player.vz-other.vz)*c.nz;if(rel>=0)return 0;
  const massRatio=other.mass/(other.mass+1.2),impulse=-rel*(.65+.7*massRatio);
  player.vx+=impulse*c.nx;player.vz+=impulse*c.nz;
+ player.speed=-player.vx*Math.sin(player.heading)-player.vz*Math.cos(player.heading);
+ player.slip=player.vx*Math.cos(player.heading)-player.vz*Math.sin(player.heading);
  other.slow=Math.max(other.slow||0,clamp(-rel/(other.mass+2),0,3));
  return -rel*massRatio;
 }
@@ -64,9 +66,14 @@ export class Shift{
  }
  stunt(kind){if(this.finished||!this.fare)return 0;this.combo=Math.min(this.combo+1,8);this.comboTime=5;const award=(kind==='slide'?12:20)*this.combo;this.tips+=award;return award;}
  hitBoat(boat,other){
-  if(this.finished||capsuleContact({...boat,length:12,width:2.5},other).gap>=0)return null;
+  if(this.finished)return null;
+  const contact=capsuleContact({...boat,length:12,width:2.5},other);if(contact.gap>=0)return null;
+  // Use closing speed across the hull and the other vessel's mass, not total
+  // driving speed. Fast glancing scrapes can be gentle; head-on hits cannot.
+  const severity=collide(boat,other,contact);
+  if(severity<TUNING.fatalImpact)return {type:'bumped',severity};
   this.finished=true;this.phase='crashed';this.fare=null;this.dockHold=0;this.tips=0;this.combo=0;this.comboTime=0;
-  return {type:'crashed'};
+  return {type:'crashed',severity};
  }
  crash(){this.combo=0;this.comboTime=0;if(this.fare)this.tips=Math.max(0,this.tips-25);}
 }

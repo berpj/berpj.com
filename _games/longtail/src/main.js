@@ -1,11 +1,10 @@
 import * as THREE from 'three';
 import {RenderPass} from 'three/addons/postprocessing/RenderPass.js';
-import {createNightBloom,createNightComposer} from './postprocessing.js';
+import {createNightBloom,createNightComposer,createNightFXAA} from './postprocessing.js';
 import {SMAAPass} from 'three/addons/postprocessing/SMAAPass.js';
-import {FXAAPass} from 'three/addons/postprocessing/FXAAPass.js';
 import {OutputPass} from 'three/addons/postprocessing/OutputPass.js';
 import {River,buildPiers,clamp,angleDelta} from './river.mjs';
-import {BoatPhysics,Shift,collide,capsuleContact,directBearing,cleanScores,saveScore,RECORD_KEY} from './simulation.mjs';
+import {BoatPhysics,Shift,TUNING,collide,capsuleContact,directBearing,cleanScores,saveScore,RECORD_KEY} from './simulation.mjs';
 import {createWorld} from './world.js';
 import {MOON_DIRECTION} from './night.js';
 import {createBoat,boatSpecs} from './boats.js';
@@ -38,7 +37,7 @@ $('#app').innerHTML=`
  <button class="round sound-menu sound-btn" aria-label="Mute sound">${soundIcon}</button>
  <div class="menu-body"><div class="menu-content">
   <h1>LONGTAIL<br><em>AFTER DARK</em></h1>
-  <p class="lede">Pick up passengers. A boat collision ends your run.</p>
+  <p class="lede">Pick up passengers. Hard crashes end your run.</p>
   <div class="mode-tabs" role="group" aria-label="Game mode"><button id="mode-shift" class="active" aria-pressed="true">NIGHT SHIFT · 3 MIN</button><button id="mode-free" aria-pressed="false">FREE CRUISE</button></div>
   <button id="start" class="primary" disabled>PLAY</button>
   <div id="loading-note" role="status">Loading game…</div>
@@ -115,14 +114,19 @@ function stepTraffic(dt){
  towlines.update();
 }
 function step(dt,input){
- if(shift.finished)return;
+ if(shift.finished)return;crashCooldown=Math.max(0,crashCooldown-dt);
  previous={x:boat.x,z:boat.z,heading:boat.heading};boat.update(dt,input);let hit=river.constrain(boat,6);
  for(const t of traffic){
   if(Math.hypot(t.x-boat.x,t.z-boat.z)>t.length+18)continue;
-  if(shift.hitBoat(boat,t)){collide(boat,t);endShift('collision',t.kind);return;}
+  const impact=shift.hitBoat(boat,t);
+  if(impact){
+   if(impact.type==='crashed'){endShift('collision',t.kind);return;}
+   if(impact.severity>.6&&crashCooldown===0){const intensity=clamp(.2+impact.severity/TUNING.fatalImpact,.25,.85);audio.impact(false,intensity);crashFeedback.impact({intensity});toast('Just a bump. Keep going.',1.6);crashCooldown=.75;}
+   continue;
+  }
   if(Math.abs(boat.speed)>12&&t.nearCooldown===0){const contact=capsuleContact({...boat,length:12,width:2.5},t);if(contact.gap>1.3&&contact.gap<6){const award=shift.stunt('near');t.nearCooldown=8;if(award){audio.event('near');stunt('CLOSE CALL',`+฿ ${award} TIP · ${shift.combo}× COMBO`);}}}
  }
- for(const t of world.bridgeColliders)if(Math.hypot(t.x-boat.x,t.z-boat.z)<28)hit=Math.max(hit,collide(boat,t));crashCooldown=Math.max(0,crashCooldown-dt);if(hit>4&&crashCooldown===0){shift.crash();audio.impact(false);crashFeedback.impact();crashCooldown=1;const nearEnd=river.nearest(boat.x,boat.z).distance;toast(nearEnd<2||nearEnd>river.length-2?'End of this reach. Turn back along the river.':hit>15?'Big boat. Bigger right of way.':'Watch the paintwork!',3);}
+ for(const t of world.bridgeColliders)if(Math.hypot(t.x-boat.x,t.z-boat.z)<28)hit=Math.max(hit,collide(boat,t));if(hit>4&&crashCooldown===0){shift.crash();audio.impact(false);crashFeedback.impact();crashCooldown=1;const nearEnd=river.nearest(boat.x,boat.z).distance;toast(nearEnd<2||nearEnd>river.length-2?'End of this reach. Turn back along the river.':hit>15?'Big boat. Bigger right of way.':'Watch the paintwork!',3);}
  if(boat.drifting&&Math.abs(boat.slip)>2){slideTime+=dt;if(slideTime>.85){slideTime=0;const award=shift.stunt('slide');if(award){stunt('RIVER SLIDE',`+฿ ${award} TIP · ${shift.combo}× COMBO`);audio.event('slide');}}}else slideTime=0;
  const event=shift.update(dt,boat);if(event){audio.event(event.type);if(event.type==='pickup'){toast(`Next stop: ${event.to.name}. Let’s make waves!`,5);stunt('ALL ABOARD',event.to.name.toUpperCase());}if(event.type==='delivered'){stunt('NICE LANDING',`${money(event.paid)} BANKED · +12 SECONDS`);toast('Fare delivered. Choose any yellow pier for your next passengers.',6);}if(event.type==='late')toast('Missed the boat! Find your next passengers.',5);if(event.type==='ended')endShift();}
  if(Math.abs(boat.speed)>2){wake.emit(boat.x+Math.sin(boat.heading)*6,boat.z+Math.cos(boat.heading)*6,boat.heading,Math.abs(boat.speed),boat.boosting?1:.4);if(boat.drifting)wake.emit(boat.x,boat.z,boat.heading,Math.abs(boat.speed),.8);}
@@ -158,12 +162,23 @@ async function init(){try{
  renderer=new THREE.WebGLRenderer({canvas:$('#scene'),antialias:false,powerPreference:'high-performance'});renderBudget=new RenderBudget(devicePixelRatio,mobile);renderer.setPixelRatio(renderBudget.ratio);renderer.setSize(innerWidth,innerHeight);renderer.toneMapping=THREE.ACESFilmicToneMapping;renderer.toneMappingExposure=1.15;renderer.outputColorSpace=THREE.SRGBColorSpace;
  scene.add(new THREE.HemisphereLight(0xa4bcd6,0x4a3e32,.82));const moon=new THREE.DirectionalLight(0x9cbce2,.62);moon.position.copy(MOON_DIRECTION).multiplyScalar(1000);scene.add(moon);const shore=new THREE.DirectionalLight(0xffd49c,.18);shore.position.set(500,220,150);scene.add(shore);
  world=createWorld(scene,river,piers,mobile);player=createBoat('longtail',0);scene.add(player);const engineLamp=new THREE.PointLight(0xffc991,3.5,7,2);engineLamp.position.set(0,1.65,4.5);player.add(engineLamp);wake=new Wake(scene,mobile);surfaceWakes=new SurfaceWakes(scene,mobile?30:46);makeTraffic();simplifyBoatReflections(world.water,traffic);
- composer=createNightComposer(renderer);composer.addPass(new RenderPass(scene,camera));composer.addPass(createNightBloom(innerWidth,innerHeight));if(!mobile){smaa=new SMAAPass();composer.addPass(smaa);}composer.addPass(new OutputPass());fxaa=new FXAAPass();fxaa.enabled=mobile;composer.addPass(fxaa);
+ composer=createNightComposer(renderer);composer.addPass(new RenderPass(scene,camera));composer.addPass(createNightBloom(innerWidth,innerHeight));if(!mobile){smaa=new SMAAPass();composer.addPass(smaa);}composer.addPass(new OutputPass());fxaa=createNightFXAA();fxaa.enabled=mobile;composer.addPass(fxaa);
  const resize=()=>{stillFrame=false;camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();pendingSize={width:innerWidth,height:innerHeight};};window.addEventListener('resize',resize);$('#scene').addEventListener('webglcontextlost',e=>{e.preventDefault();togglePause(true);toast('Graphics paused. Reload the page to restore the river.',100);});
  frameMeter=createFrameMeter(renderer);ready=true;$('#start').disabled=false;$('#start').textContent='PLAY';$('#loading-note').textContent='';previousTime=performance.now();requestAnimationFrame(animate);
  if(import.meta.env.DEV&&location.pathname.endsWith('/tests/feedback.html')){
   const {installFeedbackControls}=await import('../tests/feedback-controls.js');
-  installFeedbackControls({audio,crashFeedback,startHornCheck(){setMode(true);start();countdown=.01;},approach(kind,boost=false,{stacked=false}={}){
+  installFeedbackControls({audio,crashFeedback,bump(glancing=false,freeRun=false){
+   setMode(freeRun);start();countdown=.01;const target=traffic.find(t=>t.kind==='ferry'),p=piers[8];
+   Object.assign(target,{distance:p.distance,direction:1,lane:0,speed:0,actualSpeed:0,slow:0});stepTraffic(0);
+   const fx=-Math.sin(target.heading),fz=-Math.cos(target.heading),rx=Math.cos(target.heading),rz=-Math.sin(target.heading);
+   const offset=glancing?(target.width+2.5)/2+.08:-(target.length+12)/2-.08;
+   boat.reset(target.x+(glancing?rx:fx)*offset,target.z+(glancing?rz:fz)*offset,target.heading);
+   const speed=glancing?53:4;boat.vx=fx*speed-(glancing?rx*2:0);boat.vz=fz*speed-(glancing?rz*2:0);boat.speed=speed;
+   previous={x:boat.x,z:boat.z,heading:boat.heading};cameraHeading=boat.heading;
+   cameraPosition.set(boat.x-fx*23,12,boat.z-fz*23);cameraAim.set(boat.x+fx*30,3,boat.z+fz*30);
+   shift.update(.7,{x:p.x,z:p.z,vx:0,vz:0});shift.stunt('near');const fare=shift.fare,tips=shift.tips;
+   return()=>({active:mode==='playing',passenger:shift.fare===fare&&!!fare,tips:shift.tips>=tips});
+  },startHornCheck(){setMode(true);start();countdown=.01;},approach(kind,boost=false,{stacked=false}={}){
    setMode(true);start();countdown=.01;const target=traffic.find(t=>t.kind===kind),d=piers[8].distance;
    Object.assign(target,{distance:d+(boost?310:245),direction:-1,lane:0,speed:9,actualSpeed:9,slow:0});
    if(stacked){const second=traffic.find(t=>t.kind==='cruise');Object.assign(second,{distance:target.distance+80,direction:-1,lane:0,speed:9,actualSpeed:9,slow:0});}stepTraffic(0);

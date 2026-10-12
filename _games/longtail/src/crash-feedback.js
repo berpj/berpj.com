@@ -10,8 +10,8 @@ export class CrashFeedback{
   root.append(this.overlay,this.caption);
  }
  reset(){clearTimeout(this.timer);this.timer=null;this.overlay.hidden=true;this.caption.hidden=true;this.root.classList.remove('crashed');}
- impact({fatal=false,kind,onComplete}={}){
-  this.reset();this.overlay.hidden=false;
+ impact({fatal=false,kind,intensity=1,onComplete}={}){
+  this.reset();this.overlay.hidden=false;this.overlay.style.setProperty('--impact-opacity',String(Math.min(1,Math.max(.1,intensity))));
   this.overlay.className=`damage-overlay ${fatal?'fatal':'minor'}`;
   // Restart a second impact's CSS animation without introducing a render pass.
   this.overlay.getAnimations().forEach(animation=>{animation.cancel();animation.play();});

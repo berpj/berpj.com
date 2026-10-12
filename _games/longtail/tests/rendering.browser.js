@@ -3,9 +3,10 @@ import {renderNightFrame} from '../src/render-frame.js';
 import {FullScreenQuad} from 'three/addons/postprocessing/Pass.js';
 import {RenderPass} from 'three/addons/postprocessing/RenderPass.js';
 import {UnrealBloomPass} from 'three/addons/postprocessing/UnrealBloomPass.js';
+import {FXAAPass} from 'three/addons/postprocessing/FXAAPass.js';
 import {SurfaceWakes} from '../src/effects.js';
 import {createNightWater} from '../src/night.js';
-import {createNightBloom,createNightComposer} from '../src/postprocessing.js';
+import {createNightBloom,createNightComposer,createNightFXAA} from '../src/postprocessing.js';
 import {VisibleLights,bridgeLightFixtures} from '../src/visible-lights.js';
 
 const renderer=new THREE.WebGLRenderer({antialias:false});
@@ -67,6 +68,27 @@ check('normal HDR lights keep their original bloom',()=>{
   }
   material.dispose();let changed=0;for(let i=0;i<pixels[0].length;i++)if(pixels[0][i]!==pixels[1][i])changed++;
   assert(changed===0,`${changed} channels changed`);return 'pixel-identical to the original lighting';
+});
+check('mobile antialiasing preserves fine detail and still smooths diagonal edges',()=>{
+ const material=new THREE.ShaderMaterial({
+  vertexShader:'void main(){gl_Position=vec4(position.xy,0.,1.);}',
+  fragmentShader:'void main(){vec2 p=floor(gl_FragCoord.xy);float detail=step(3.,mod(p.x,4.));float diagonal=step(p.x*.37+73.,p.y);float value=p.y<60.?detail:diagonal;gl_FragColor=vec4(vec3(.1+.8*value),1.);}'
+ });
+ draw(material);
+ const output=new THREE.WebGLRenderTarget(size,size,{type:THREE.HalfFloatType}),results=[];
+ for(const pass of[new FXAAPass(),createNightFXAA()]){
+  pass.setSize(size,size);pass.render(renderer,output,target);
+  const pixels=new Uint16Array(size*size*4);renderer.readRenderTargetPixels(output,0,0,size,size,pixels);
+  let contrast=0,partial=0;
+  const value=(x,y)=>THREE.DataUtils.fromHalfFloat(pixels[(y*size+x)*4]);
+  for(let y=8;y<52;y++)for(let x=8;x<120;x+=4)contrast+=value(x+3,y)-value(x+1,y);
+  for(let y=70;y<125;y++)for(let x=4;x<124;x++){const v=value(x,y);assert(Number.isFinite(v),'invalid antialiasing output');if(v>.13&&v<.87)partial++;}
+  results.push({contrast,partial});pass.dispose();
+ }
+ material.dispose();output.dispose();
+ assert(results[1].contrast>results[0].contrast*1.1,'fine detail is still over-smoothed');
+ assert(results[1].partial>50,'diagonal edge smoothing was lost');
+ return `${Math.round((results[1].contrast/results[0].contrast-1)*100)}% more fine-pattern contrast; ${results[1].partial} softened edge pixels`;
 });
 function lightImage(lightScene,lightCamera){
   renderer.setRenderTarget(target);renderer.clear();renderer.render(lightScene,lightCamera);

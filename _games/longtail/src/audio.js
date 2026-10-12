@@ -17,7 +17,7 @@ export class RiverAudio{
  stopEffects(effects=this.effects){for(const effect of effects)effect.stop();effects.clear();}
  track(effect,warning=false){this.effects.add(effect);if(warning)this.warningEffects.add(effect);effect.done.then(()=>{this.effects.delete(effect);this.warningEffects.delete(effect);});}
  warningHorn(kind,options){if(!this.ctx||!this.active||this.muted)return;this.stopEffects(this.warningEffects);this.track(playWarningHorn(this.ctx,this.master,kind,options),true);}
- impact(fatal=true){if(!this.ctx||!this.active||this.muted)return;this.track(playCrashImpact(this.ctx,this.master,this.impactBuffer,{fatal}));}
+ impact(fatal=true,intensity=1){if(!this.ctx||!this.active||this.muted)return;const effect=playCrashImpact(this.ctx,this.master,this.impactBuffer,{fatal});effect.output.gain.value*=Math.min(1,Math.max(.1,intensity));this.track(effect);}
  mute(){this.muted=!this.muted;this.sync();return this.muted;}
  musicToggle(){this.musicEnabled=!this.musicEnabled;this.sync();return this.musicEnabled;}
  update(speed,boost){if(!this.ctx||!this.active)return;const t=this.ctx.currentTime,rev=32+Math.abs(speed)*2.6+(boost?16:0);this.oscs.forEach((o,i)=>o.frequency.setTargetAtTime(rev*(i+1),t,.09));this.engine.gain.setTargetAtTime(.16+Math.min(Math.abs(speed)/45,1)*.27,t,.08);this.waterGain.gain.setTargetAtTime(.06+Math.min(Math.abs(speed),53)*.009,t,.1);}

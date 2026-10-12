@@ -1,16 +1,20 @@
 import {RiverAudio} from '../src/audio.js';
 import {makeImpactNoise,playCrashImpact,playWarningHorn} from '../src/sound-effects.js';
 
-export function installFeedbackControls({approach,audio,crashFeedback,startHornCheck}){
+export function installFeedbackControls({approach,audio,crashFeedback,startHornCheck,bump}){
  const panel=document.createElement('aside');panel.style.cssText='position:fixed;left:8px;bottom:8px;z-index:20;max-width:370px;background:#07111eec;color:white;padding:8px;font:12px system-ui;border:1px solid #fff5';
  const status=document.createElement('output');status.style.cssText='display:block;max-height:180px;overflow:auto;white-space:pre-wrap';
- let firstHorn=null,checkingAudio=false;
+ let firstHorn=null,checkingAudio=false,minorImpact=false,bumpSerial=0;
  function report(message){status.textContent+=message+'\n';}
  function begin(kind,boost=false,options={}){firstHorn=null;approach(kind,boost,options);}
  function button(name,fn){const b=document.createElement('button');b.textContent=name;b.style.cssText='padding:5px;background:#24384a;color:white;border:1px solid #fff4;margin:3px';b.onclick=fn;panel.append(b);}
  for(const kind of ['ferry','cruise','longtail'])button(`Approach ${kind}`,()=>{status.textContent='Approaching '+kind+'\n';begin(kind);});
  button('Boost toward ferry',()=>{status.textContent='Boosting toward ferry\n';begin('ferry',true);});
  button('Two boats ahead',()=>{status.textContent='Ferry first, cruise behind it\n';begin('ferry',true,{stacked:true});});
+ for(const [name,glancing,free]of [['Gentle bump',false,false],['Gentle bump (free)',false,true],['Fast scrape',true,false]])button(name,()=>{
+  const serial=++bumpSerial;minorImpact=false;firstHorn=null;status.textContent=name+' with passenger aboard\n';const verify=bump(glancing,free);
+  setTimeout(()=>{if(serial!==bumpSerial)return;const state=verify();report(minorImpact&&Object.values(state).every(Boolean)?`PASS ${name}: run continues, passenger and tips kept`:`FAIL ${name}: impact=${minorImpact}, ${JSON.stringify(state)}`);},1200);
+ });
  button('Check H key',()=>{status.textContent='Press H to sound your boat horn.\n';startHornCheck();});
  button('Player horn mix',async()=>{status.textContent='';try{report(await checkMix(true));}catch(e){report('FAIL '+e.message);throw e;}});
  button('Audio checks',async()=>{status.textContent='';try{report(await checkAudio());}catch(e){report('FAIL '+e.message);throw e;}});
@@ -44,7 +48,7 @@ export function installFeedbackControls({approach,audio,crashFeedback,startHornC
  const playerHorn=audio.horn.bind(audio);audio.horn=()=>{const effect=playerHorn();if(!checkingAudio)report(`Player horn: ${effect?'triggered':'ignored'}, audio ${audio.ctx?.state}, ${audio.active?'active':'inactive'}`);return effect;};
  window.addEventListener('keydown',e=>{if(e.code==='KeyH'||e.key?.toLowerCase()==='h')report(`Key received: ${e.code} / ${e.key}`);});
  const horn=audio.warningHorn.bind(audio);audio.warningHorn=(kind,warning)=>{if(!checkingAudio){firstHorn??=performance.now();report(`Warning: ${kind}, ${(warning.time??0).toFixed(2)} s before predicted contact, pan ${(warning.pan??0).toFixed(2)}`);}horn(kind,warning);};
- const impact=audio.impact.bind(audio);audio.impact=fatal=>{if(!checkingAudio){report(`Impact: ${fatal===false?'bank':'fatal'}${firstHorn===null?'':`, ${((performance.now()-firstHorn)/1000).toFixed(2)} s after first horn`}`);firstHorn=null;}impact(fatal);};
+ const impact=audio.impact.bind(audio);audio.impact=(fatal,intensity)=>{if(fatal===false)minorImpact=true;if(!checkingAudio){report(`Impact: ${fatal===false?'minor':'fatal'}${firstHorn===null?'':`, ${((performance.now()-firstHorn)/1000).toFixed(2)} s after first horn`}`);firstHorn=null;}impact(fatal,intensity);};
  new MutationObserver(()=>{if(document.querySelector('#results').hidden===false)report('Results: '+document.querySelector('#result-title').textContent);}).observe(document.querySelector('#results'),{attributes:true,attributeFilter:['hidden']});
  report('Ready. Approaches run real traffic, physics, warning audio and end-of-run UI.');
 }

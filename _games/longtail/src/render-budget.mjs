@@ -4,8 +4,10 @@ import {clamp} from './river.mjs';
 // smooth motion. Several seconds of evidence and a slow recovery avoid pumping.
 export class RenderBudget {
   constructor(deviceRatio=1,mobile=false){
-    this.maximum=Math.min(deviceRatio,mobile?1.15:1.5);
-    this.minimum=Math.min(this.maximum,mobile?.8:.9);
+    this.maximum=Math.min(deviceRatio,mobile?1.75:1.5);
+    // Keep the foreground above CSS resolution on high-density phones. The
+    // previous .8x floor blurred the whole river, even the player's own boat.
+    this.minimum=Math.min(this.maximum,mobile?1.25:1);
     this.ratio=this.maximum;this.warmup=4;this.elapsed=0;this.frames=0;this.fastTime=0;
   }
   update(dt){

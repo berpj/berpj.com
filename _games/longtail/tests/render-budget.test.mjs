@@ -10,3 +10,16 @@ test('brief stalls and paused tabs do not permanently reduce resolution',()=>{
 test('resolution recovers slowly only with sustained frame-rate headroom',()=>{
  const budget=new RenderBudget(2);run(budget,11,35);const reduced=budget.ratio;run(budget,8,60);assert.equal(budget.ratio,reduced);run(budget,15,60);assert(budget.ratio>reduced&&budget.ratio<=reduced+.1);
 });
+test('retina phones preserve foreground detail even under sustained load',()=>{
+ const phone=new RenderBudget(3,true);
+ assert.equal(phone.ratio,1.75);
+ run(phone,60,25);
+ assert.equal(phone.ratio,1.25,'never upscale a sub-CSS-resolution foreground');
+ assert(Math.floor(390*phone.ratio)>=487,'retain at least 487 pixels across a 390px phone');
+});
+test('resolution floors respect low-density displays without undersampling them',()=>{
+ for(const mobile of[false,true]){
+  const screen=new RenderBudget(1,mobile);run(screen,60,25);
+  assert.equal(screen.ratio,1);
+ }
+});
