@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import * as THREE from 'three';
-import {River,angleDelta,buildPiers} from '../src/river.mjs';
+import {River,angleDelta,buildPiers,pierCollider} from '../src/river.mjs';
 import {boatSpecs} from '../src/boats.js';
 import {cargoSpecs} from '../src/cargo.js';
 import {createFleet,advanceFleet,convoyOffsets,trafficPose,TRAFFIC_SPEED_SCALE,TRAFFIC_SIZE_SCALE} from '../src/traffic.mjs';
@@ -76,13 +76,21 @@ test('new top speeds retain reliable brakes and continuous collision sampling',(
  assert(stopped&&stopTime<1.5);assert(TUNING.speed===34);
 });
 
-test('launch berths stay inside boarding rings and clear of both moving fleets',()=>{
+test('both modes launch in mid-river clear of real dock footprints and moving fleets',()=>{
  const piers=buildPiers(river);
  for(const mobile of[false,true]){
   const fleet=createFleet(river,specs,mobile),boats=[0,8].map(i=>{
-   const b=new BoatPhysics();b.launch(piers[i]);
-   assert(Math.hypot(b.x-piers[i].x,b.z-piers[i].z)<21);
-   const n=river.nearest(b.x,b.z);assert(Math.abs(n.offset)<n.width/2-6);
+   const b=new BoatPhysics();b.launch(river,piers[i]);
+   const n=river.nearest(b.x,b.z);assert(Math.abs(n.offset)<.001);assert(Math.abs(angleDelta(b.heading,n.heading))<.001);
+   assert(Math.hypot(b.x-piers[i].x,b.z-piers[i].z)>21,'must not board while sitting at spawn');
+   for(const pier of piers)assert(capsuleContact({...b,length:12,width:2.5},pierCollider(pier)).gap>30,'spawn intersects a dock');
+   // The old bank-side launch was inside the pontoon, not just near it.
+   const p=piers[i],old={x:p.x+p.nx*14,z:p.z+p.nz*14,heading:p.heading,length:12,width:2.5};
+   assert(capsuleContact(old,pierCollider(p)).gap<0);
+   const moving=new BoatPhysics();moving.launch(river,p);
+   for(let step=0;step<120;step++)moving.update(1/60,{gas:true});
+   assert(Math.hypot(moving.x-b.x,moving.z-b.z)>20,'cannot drive away from the launch');
+   for(const pier of piers)assert(capsuleContact({...moving,length:12,width:2.5},pierCollider(pier)).gap>20,'departure meets a dock');
    return {...b,length:12,width:2.5};
   });
   for(let time=0;time<240;time+=.5){

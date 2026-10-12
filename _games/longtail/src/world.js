@@ -5,7 +5,7 @@ import {createRiverfront} from './riverfront.js';
 import {createFountains} from './fountains.js';
 import {mergeGeometries} from 'three/addons/utils/BufferGeometryUtils.js';
 import {buildLandmark} from './landmarks.js';
-import {project,clamp} from './river.mjs';
+import {project,clamp,pierCollider} from './river.mjs';
 
 const rnd=seed=>()=>{seed=(Math.imul(seed,1664525)+1013904223)>>>0;return seed/4294967296;};
 const random=rnd(81623);
@@ -108,14 +108,14 @@ export function createWorld(scene,river,piers,mobile){
  }carMeshes.forEach(m=>m.instanceMatrix.needsUpdate=true);}
  const limits=new Batch(lightFixtures),buoy=M(0xb62e28,0xff572d,.35);for(const distance of[2,river.length-2]){const p=river.sample(distance);for(let offset=-p.width*.43;offset<=p.width*.43;offset+=p.width/7){const q=river.sample(distance,offset);limits.add(new THREE.SphereGeometry(1.05,8,6),buoy,q.x,.55,q.z,1,.9,1);limits.box(glow,q.x,1.7,q.z,.25,.6,.25);}const marker=sign('RIVER LIMIT · TURN BACK',27,3,'#18313b','#ffd290');marker.position.set(p.x,6,p.z);marker.rotation.y=p.heading;scene.add(marker);}limits.finish(scene);
  const pierVisuals=[];
- for(const p of piers){const g=new THREE.Group();g.position.set(p.x+p.nx*15,0,p.z+p.nz*15);const b=new Batch(lightFixtures),heading=Math.atan2(p.nx,p.nz);g.rotation.y=heading;
+ for(const p of piers){const dock=pierCollider(p),g=new THREE.Group();g.position.set(dock.x,0,dock.z);const b=new Batch(lightFixtures),heading=dock.heading+Math.PI/2;g.rotation.y=heading;
   b.box(stone,0,1.2,0,17,1.3,9);b.box(warm,0,1.8,15,4,.5,31);b.box(rail,0,5.9,0,18,.35,9.6);
   for(const x of[-7.3,7.3])for(const z of[-3.7,3.7]){b.box(warm,x,3.8,z,.32,4.5,.32);b.box(rail,x,-.2,z,.65,3,.65);}
   b.box(glow,0,5.7,-4.8,17,.2,.22);
   // Small groups waiting under the pier canopy.
   const skin=M(0xb58869),shirt=M([0x8bbfc1,0xd8ae68,0xa5604d][p.index%3]),pants=M(0x283644);for(let i=0;i<3;i++){const x=(i-1)*2.8,z=-.7+(i%2)*1.4;b.box(shirt,x,3.1,z,.57,.85,.34);b.add(new THREE.SphereGeometry(.22,7,6),skin,x,3.73,z,1,1.18,.96);for(const s of[-1,1]){b.box(pants,x+s*.15,2.35,z,.19,.75,.22);b.box(shirt,x+s*.38,3.05,z,.15,.65,.19);}}b.finish(g);const label=sign(p.name.toUpperCase(),15,2);label.position.set(0,5,-4.9);label.rotation.y=Math.PI;g.add(label);
   // The water-side pickup is offset from the solid pontoon, leaving a clear berth.
-  scene.add(g);bridgeColliders.push({x:g.position.x,z:g.position.z,width:9,length:17,heading:heading-Math.PI/2,mass:10000,vx:0,vz:0});
+  scene.add(g);bridgeColliders.push(dock);
   const ring=new THREE.Mesh(new THREE.RingGeometry(17.5,18.3,64),new THREE.MeshBasicMaterial({color:0xffbd66,transparent:true,opacity:.8,side:THREE.DoubleSide,depthWrite:false,toneMapped:false}));ring.rotation.x=-Math.PI/2;ring.position.set(p.x,.18,p.z);scene.add(ring);
   const beacon=sign('PICK UP',13,2.8,'#163237','#ffd995');beacon.position.set(p.x,9,p.z);scene.add(beacon);pierVisuals.push({pier:p,ring,beacon});
  }

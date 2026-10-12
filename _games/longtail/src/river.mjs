@@ -45,3 +45,7 @@ export const PIER_DEFS=[
  {id:'sathorn',name:'Sathorn Pier',thai:'ท่าสาทร',lon:100.5129,lat:13.71895,side:-1},
 ];
 export function buildPiers(river){return PIER_DEFS.map((p,i)=>{const geo=project(p.lon,p.lat),n=river.nearest(geo.x,geo.z),d=clamp(n.distance,65,river.length-65),c=river.sample(d),s=p.side;return {...p,index:i,distance:d,x:c.x+c.nx*s*(c.width/2-26),z:c.z+c.nz*s*(c.width/2-26),bankX:c.x+c.nx*s*(c.width/2+2),bankZ:c.z+c.nz*s*(c.width/2+2),heading:c.heading,nx:c.nx*s,nz:c.nz*s};});}
+
+// Shared by dock placement and collisions so launch-clearance tests use the
+// same pontoon footprint that the world actually builds.
+export function pierCollider(p){return {x:p.x+p.nx*15,z:p.z+p.nz*15,width:9,length:17,heading:Math.atan2(p.nx,p.nz)-Math.PI/2,mass:10000,vx:0,vz:0};}

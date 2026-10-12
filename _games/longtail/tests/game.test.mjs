@@ -12,7 +12,7 @@ function tick(shift,seconds,body){let event;for(let t=0;t<seconds;t+=dt){const e
 test('OSM reach spans Wat Arun to Taksin and all passenger berths are navigable',()=>{assert(river.length>3500&&river.length<5500);assert.equal(piers.length,12);for(const p of piers){const n=river.nearest(p.x,p.z);assert(Math.abs(n.offset)<n.width/2-10,p.name);assert(n.distance>30&&n.distance<river.length-30,p.name);}});
 test('sample and nearest agree along the complete route',()=>{for(let d=20;d<river.length;d+=37){const p=river.sample(d,18),n=river.nearest(p.x,p.z);assert(Math.abs(n.distance-d)<4);assert(Math.abs(n.offset-18)<2);}});
 test('bank and endpoint collisions keep fast boats inside the reach',()=>{for(const d of[20,600,1800,3000,river.length-20])for(const side of[-1,1]){const p=river.sample(d,side*250),b={...p,vx:p.nx*side*30,vz:p.nz*side*30};river.constrain(b,6);const n=river.nearest(b.x,b.z);assert(Math.abs(n.offset)<n.width/2-4);assert(Number.isFinite(b.vx));}});
-test('boat accelerates smoothly and boost stays unlimited but harder to steer',()=>{const b=run(new BoatPhysics(),12,{gas:true});assert(Math.abs(b.speed-TUNING.speed)<.1);const boost=run(new BoatPhysics(),20,{gas:true,boost:true});assert(Math.abs(boost.speed-TUNING.boostSpeed)<.1);const normal=run(new BoatPhysics(),4,{gas:true,steer:1});const turbo=run(new BoatPhysics(),4,{gas:true,boost:true,steer:1});assert(Math.abs(turbo.yaw/normal.yaw-.2)<.01);});
+test('boat accelerates smoothly and boost stays unlimited but harder to steer',()=>{const b=run(new BoatPhysics(),12,{gas:true});assert(Math.abs(b.speed-TUNING.speed)<.1);const boost=run(new BoatPhysics(),20,{gas:true,boost:true});assert(Math.abs(boost.speed-TUNING.boostSpeed)<.1);const normal=run(new BoatPhysics(),4,{gas:true,steer:1});const turbo=run(new BoatPhysics(),4,{gas:true,boost:true,steer:1});assert(Math.abs(Math.abs(normal.yaw)-1.05)<.005);assert(Math.abs(Math.abs(turbo.yaw)-.254)<.005);});
 test('braking stops quickly then reverses without a long dead interval',()=>{const b=run(new BoatPhysics(),4,{gas:true});let time=0,stopDistance=0,stopped=false;while(time<2){const before={x:b.x,z:b.z};b.update(dt,{brake:true});if(!stopped)stopDistance+=Math.hypot(b.x-before.x,b.z-before.z);if(b.speed<.1)stopped=true;if(b.speed<-.1)break;time+=dt;}assert(time<1.1);assert(stopDistance<16);run(b,2,{brake:true});assert(b.speed>=-7.01&&b.speed<-6.8);});
 test('powerslides develop visible lateral motion and regrip on release',()=>{const b=run(new BoatPhysics(),3,{gas:true});run(b,.7,{gas:true,steer:1,drift:true});assert(b.drifting);assert(Math.abs(b.slip)>5);run(b,1,{gas:true});assert(Math.abs(b.slip)<1);});
 test('physics is stable across 60 and 120 Hz steps',()=>{const a=new BoatPhysics(),b=new BoatPhysics();for(let i=0;i<600;i++)a.update(1/60,{gas:true,steer:.25});for(let i=0;i<1200;i++)b.update(1/120,{gas:true,steer:.25});assert(Math.hypot(a.x-b.x,a.z-b.z)<1.8);assert(Math.abs(a.heading-b.heading)<.02);});
@@ -30,9 +30,9 @@ test('simultaneous fare timeout and shift expiration ends the shift immediately'
 
 test('turbo suppresses slide steering and quickly widens an existing turn',()=>{
  const b=run(new BoatPhysics(),3,{gas:true,steer:1,drift:true});
- assert(b.drifting);const slidingYaw=Math.abs(b.yaw);
+ assert(b.drifting);
  run(b,.4,{gas:true,steer:1,boost:true,drift:true});
- assert(b.boosting);assert(!b.drifting);assert(Math.abs(b.yaw)<slidingYaw*.16);
+ assert(b.boosting);assert(!b.drifting);assert(Math.abs(b.yaw)<.27);
  run(b,.6,{gas:true,steer:1});
  assert(!b.boosting);assert(Math.abs(b.yaw)>TUNING.steer*.98);
 });
@@ -66,4 +66,13 @@ test('crashes discard the active fare but preserve previously banked earnings',(
 test('bank impacts and recovery penalties do not end a run',()=>{
  const s=new Shift(piers);tick(s,.7,at(piers[0]));s.stunt('near');s.crash();
  assert(!s.finished);assert(s.fare);assert.equal(s.combo,0);
+});
+
+test('normal steering is gentler in both directions while turbo keeps its previous rate',()=>{
+ for(const steer of[-1,-.5,.5,1]){
+  const normal=run(new BoatPhysics(),4,{gas:true,steer});
+  const turbo=run(new BoatPhysics(),4,{gas:true,boost:true,steer});
+  assert(Math.abs(normal.yaw-(-steer*1.05))<.002);
+  assert(Math.abs(turbo.yaw-(-steer*1.27*.2))<.002);
+ }
 });

@@ -2,7 +2,7 @@
 
 A standalone browser arcade boat game for `https://berpj.com/longtail/`.
 
-Pilot a traditional wooden long-tail through the real Chao Phraya river reach from Wat Arun to Taksin/Sathorn Bridge, near The River condominium. Night Shift offers three minutes plus delivery bonuses; Free Cruise starts at ICONSIAM and has no overall timer. Stop in any golden pier ring to board, deliver passengers to the green ring, and earn tips through near misses and stern slides. Any collision with a traffic boat ends the run immediately, including in Free Cruise; the fare in progress is lost, while completed fares remain banked. Between fares, the minimap shows all available passenger piers and the arrow is hidden. The arrow points directly to the destination during a fare.
+Pilot a traditional wooden long-tail through the real Chao Phraya river reach from Wat Arun to Taksin/Sathorn Bridge, near The River condominium. Night Shift offers three minutes plus delivery bonuses; Free Cruise starts alongside ICONSIAM and has no overall timer. Both modes start in the middle of the river, facing downstream, clear of the docks. Stop in any golden pier ring to board, deliver passengers to the green ring, and earn tips through near misses and stern slides. Any collision with a traffic boat ends the run immediately, including in Free Cruise; the fare in progress is lost, while completed fares remain banked. Between fares, the minimap shows all available passenger piers and the arrow is hidden. The arrow points directly to the destination during a fare.
 
 ## Build and run
 
@@ -20,7 +20,7 @@ No backend, API key, subscription or runtime map service. The installed dependen
 ## Controls
 
 - W / up: throttle. S / down: strong brake, then reverse after a short stop.
-- A D / left right: steer. Shift: unlimited boost with 20% of normal steering. Space: stern slide (unavailable during boost).
+- A D / left right: steer. Shift: unlimited boost with a much wider turning radius. Normal steering is 1.05 rad/s; boost keeps its previous 0.254 rad/s turn rate. Space: stern slide (unavailable during boost).
 - H: boat horn. R: recover to the channel, three-second penalty. Esc: pause.
 - Touch: horizontal steering pad, throttle, brake/reverse, boost and slide buttons. Holding touch Boost or Slide also applies throttle, so two thumbs are sufficient.
 - Gamepad: left stick, RT throttle, LT brake, A boost, B slide, Y horn, X recover, Start pause.
