@@ -1,9 +1,8 @@
 import * as THREE from 'three';
 import { Water } from 'three/addons/objects/Water.js';
-import {MOON_DIRECTION,moonDirectionForCamera} from './moon-direction.mjs';
+import {MOON_DIRECTION,moonDirectionAtLaunch} from './moon-direction.mjs';
 
-// Keep the moon in the right-hand sky and share its direction with hull
-// lighting and the moonlit water highlights.
+// Share one fixed world bearing with hull lighting and water highlights.
 export {MOON_DIRECTION} from './moon-direction.mjs';
 
 // The sky is drawn at far depth using only camera rotation. A world-centred
@@ -55,7 +54,10 @@ export function createNightSky(scene) {
   sky.name='infinite-night-sky';sky.renderOrder=-1000;sky.frustumCulled=false;scene.add(sky);
   const direction=material.uniforms.moonDirection.value,moonlight=new THREE.DirectionalLight(0x9cbce2,.62);
   moonlight.name='moonlight';moonlight.position.copy(direction).multiplyScalar(1000);scene.add(moonlight);
-  return {sky,direction,moonlight,update(time,camera){material.uniforms.time.value=time;if(camera)moonDirectionForCamera(camera,direction);moonlight.position.copy(direction).multiplyScalar(1000);}};
+  return {sky,direction,moonlight,
+    setLaunchView(camera){moonDirectionAtLaunch(camera,direction);moonlight.position.copy(direction).multiplyScalar(1000);},
+    update(time){material.uniforms.time.value=time;}
+  };
 }
 
 function riverNormals(){

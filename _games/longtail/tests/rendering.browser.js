@@ -97,17 +97,33 @@ function lightImage(lightScene,lightCamera){
   let energy=0,peak=0;for(let i=0;i<pixels.length;i+=4){const value=THREE.DataUtils.fromHalfFloat(pixels[i]);assert(Number.isFinite(value),'invalid light pixel');energy+=value;peak=Math.max(peak,value);}
   return {energy,peak,pixels};
 }
-check('moon stays visible in the right-hand sky across phone and desktop headings',()=>{
+check('moon starts visible in the right-hand sky across phone and desktop headings',()=>{
  const s=new THREE.Scene(),sky=createNightSky(s),c=new THREE.PerspectiveCamera(62,1,.3,8000);
  let minimum=Infinity;
  for(const aspect of[390/844,16/9])for(const heading of[0,1.6,3.14,4.7]){
-  c.aspect=aspect;c.updateProjectionMatrix();c.position.set(600,12,-1400);c.lookAt(600+Math.sin(heading)*53,3,-1400+Math.cos(heading)*53);sky.update(12,c);
+  c.aspect=aspect;c.updateProjectionMatrix();c.position.set(600,12,-1400);c.lookAt(600+Math.sin(heading)*53,3,-1400+Math.cos(heading)*53);sky.setLaunchView(c);sky.update(12);
   const {pixels}=lightImage(s,c);assert(invalidPixels(target)===0,'invalid sky pixels');
   const x=Math.floor(size*.70),y=Math.floor(size*.77);let moon=0;
   for(let dy=-2;dy<=2;dy++)for(let dx=-2;dx<=2;dx++)moon=Math.max(moon,THREE.DataUtils.fromHalfFloat(pixels[((y+dy)*size+x+dx)*4]));
   minimum=Math.min(minimum,moon);assert(moon>.3,'moon not visible in expected right-hand sky');
  }
  sky.sky.geometry.dispose();sky.sky.material.dispose();return `8 launch views; minimum moon luminance ${minimum.toFixed(2)}`;
+});
+check('moon moves across the view when turning and disappears when looking away',()=>{
+ const s=new THREE.Scene(),sky=createNightSky(s),c=new THREE.PerspectiveCamera(62,1,.3,8000);
+ c.position.set(0,12,0);c.lookAt(0,3,-53);sky.setLaunchView(c);const bearing=sky.direction.clone(),lighting=sky.moonlight.position.clone();
+ function centroid(){sky.update(12,c);const {pixels}=lightImage(s,c);let x=0,y=0,count=0;assert(invalidPixels(target)===0,'invalid sky pixels');
+  for(let j=0;j<size;j++)for(let i=0;i<size;i++)if(THREE.DataUtils.fromHalfFloat(pixels[(j*size+i)*4])>.3){x+=i+.5;y+=j+.5;count++;}
+  return {x:x/Math.max(1,count),y:y/Math.max(1,count),count};
+ }
+ const start=centroid();assert(start.count>0,'moon missing at launch');
+ c.rotateY(-.18);const turned=centroid();assert(turned.count>0&&Math.abs(turned.x-start.x)>12,'moon remained stuck on screen');
+ c.fov=69;c.aspect=390/844;c.updateProjectionMatrix();const zoomed=centroid();assert(zoomed.count>0,'moon missing after a small turn and boost');
+ c.updateMatrixWorld();const predicted=bearing.clone().multiplyScalar(4000).add(c.position).project(c);
+ assert(Math.abs(zoomed.x-(predicted.x*.5+.5)*size)<2&&Math.abs(zoomed.y-(predicted.y*.5+.5)*size)<2,'moon changed world bearing with viewport or zoom');
+ c.rotateY(Math.PI);assert(centroid().count===0,'moon follows a half-turn instead of staying behind');
+ assert(sky.direction.distanceTo(bearing)===0&&sky.moonlight.position.distanceTo(lighting)===0,'moon lighting rotated with the camera');
+ sky.sky.geometry.dispose();sky.sky.material.dispose();return 'screen motion, boost/portrait framing and half-turn verified';
 });
 check('drones stay finite and visible while morphing, and respect building occlusion',()=>{
  const s=new THREE.Scene();s.fog=new THREE.FogExp2(0,.00056);

@@ -38,6 +38,11 @@ addButton('Resolution stress check',async()=>{
  }
  status.textContent=`${black===0?'PASS':'FAIL'}: ${black} black frames across 90 full-scene resolution changes`;
 });
+function moonLaunch(index){const p=river.sample(piers[index].distance);camera.fov=62;camera.updateProjectionMatrix();camera.position.set(p.x+Math.sin(p.heading)*23,12,p.z+Math.cos(p.heading)*23);camera.lookAt(p.x-Math.sin(p.heading)*30,3,p.z-Math.cos(p.heading)*30);world.setMoonLaunchView(camera);status.textContent='Moon launch view · '+piers[index].name;draw();}
+addButton('Moon: Night Shift',()=>moonLaunch(0));addButton('Moon: Free Cruise',()=>moonLaunch(8));
+addButton('Moon: turn right',()=>{camera.rotateY(-.20);status.textContent='Moon remains in the sky as the camera turns right';draw();});
+addButton('Moon: turn around',()=>{camera.rotateY(Math.PI);status.textContent='Moon should be behind the camera';draw();});
+addButton('Moon: boost view',()=>{camera.fov=69;camera.updateProjectionMatrix();status.textContent='Boost changes the field of view, not the moon bearing';draw();});
 function draw(){world.update(12,camera,shift);composer.render();}
 window.addEventListener('resize',()=>{camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();world.update(12,camera,shift);renderNightFrame(renderer,composer,{size:{width:innerWidth,height:innerHeight}});});
 landmark('millennium-hilton');
