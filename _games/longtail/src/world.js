@@ -4,6 +4,7 @@ import {createNightSky,createNightWater} from './night.js';
 import {VisibleLights,collectLightFixture,transformLightFixtures,bridgeLightFixtures} from './visible-lights.js';
 import {createRiverfront} from './riverfront.js';
 import {createFountains} from './fountains.js';
+import {createDroneShow} from './drone-show.js';
 import {mergeGeometries} from 'three/addons/utils/BufferGeometryUtils.js';
 import {buildLandmark} from './landmarks.js';
 import {mappedBuildings,mappedBuildingById} from './mapped-architecture.js';
@@ -63,7 +64,7 @@ export function createWorld(scene,river,piers,mobile){
  // Extend the river off the authored ends, avoiding visible rectangular water caps.
  for(const list of [west,east]){const first=list===west?0:list.length-1,last=list===west?list.length-1:0;const a=river.sample(0),b=river.sample(river.length);list[first].x+=Math.sin(a.heading)*1600;list[first].y-=Math.cos(a.heading)*1600;list[last].x-=Math.sin(b.heading)*1600;list[last].y+=Math.cos(b.heading)*1600;}
  const land=new THREE.Shape([new THREE.Vector2(-5500,-5500),new THREE.Vector2(5500,-5500),new THREE.Vector2(5500,5500),new THREE.Vector2(-5500,5500)]);land.holes.push(new THREE.Path(holePoints));
- const geo=new THREE.ExtrudeGeometry(land,{depth:4,bevelEnabled:false,steps:1});geo.rotateX(-Math.PI/2);const landMesh=new THREE.Mesh(geo,M(0x252e2e));landMesh.position.y=-1;scene.add(landMesh);
+ const geo=new THREE.ExtrudeGeometry(land,{depth:4,bevelEnabled:false,steps:1});geo.rotateX(-Math.PI/2);const groundMaterial=M(0x101719);groundMaterial.roughness=1;const landMesh=new THREE.Mesh(geo,groundMaterial);landMesh.name='riverbank-ground';landMesh.position.y=-1;scene.add(landMesh);
  const nightWater=createNightWater(scene,mobile),water=nightWater.water;
  const landmarks=[];
  for(const [kind,name,lon,lat,side]of LANDMARKS){
@@ -131,10 +132,10 @@ export function createWorld(scene,river,piers,mobile){
   const beacon=sign('PICK UP',13,2.8,'#163237','#ffd995');beacon.position.set(p.x,9,p.z);scene.add(beacon);pierVisuals.push({pier:p,ring,beacon});
  }
  const nightSky=createNightSky(scene),sky=nightSky.sky;
- const riverfront=createRiverfront(scene,river,landmarks,mobile),fountains=createFountains(scene,river,landmarks,mobile);
+ const riverfront=createRiverfront(scene,river,landmarks,mobile),fountains=createFountains(scene,river,landmarks,mobile),droneShow=createDroneShow(scene,river,landmarks,mobile);
  lightFixtures.push(...riverfront.fixtures);const visibleLights=new VisibleLights(scene,lightFixtures);
  const localLights=Array.from({length:mobile?2:3},()=>{const l=new THREE.PointLight(0xffc17c,0,46,2);scene.add(l);return l;});
- return {water,landmarks,pierVisuals,bridgeColliders,sky,visibleLights,update(time,camera,shift,boatLights=[]){nightSky.update(time);updateBridgeTraffic(time);riverfront.update(time,camera);fountains.update(time,camera);const lightSources=[...riverfront.lights,...fountains.lights,...boatLights];nightWater.update(time,camera,lightSources);
+ return {water,landmarks,pierVisuals,bridgeColliders,sky,visibleLights,droneShow,update(time,camera,shift,boatLights=[]){nightSky.update(time,camera);droneShow.update(time);updateBridgeTraffic(time);riverfront.update(time,camera);fountains.update(time,camera);const lightSources=[...riverfront.lights,...fountains.lights,...boatLights];nightWater.update(time,camera,lightSources,nightSky.direction);
  const nearby=lightSources.map(s=>({s,d:(s.x-camera.position.x)**2+(s.z-camera.position.z)**2})).sort((a,b)=>a.d-b.d);
  for(let i=0;i<localLights.length;i++){const s=nearby[i]?.s,l=localLights[i];l.intensity=s?Math.min(100,s.power*(s.boat?.48:1.9)):0;if(s){l.position.set(s.x,s.y,s.z);l.color.set(s.color);l.distance=s.distance||46;}}
 for(const v of pierVisuals){const active=shift.fare?shift.fare.to.id===v.pier.id:!shift.finished&&(shift.cooldowns.get(v.pier.id)||0)<=shift.clock;v.ring.visible=v.beacon.visible=active;if(active){v.ring.material.color.set(shift.fare?0x89f2cf:0xffbd66);v.ring.material.opacity=.55+Math.sin(time*3)*.15;v.beacon.quaternion.copy(camera.quaternion);v.beacon.visible=camera.position.distanceTo(v.beacon.position)<550;v.beacon.position.y=9+Math.sin(time*2)*.6;}}}};

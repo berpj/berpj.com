@@ -1,9 +1,10 @@
 import * as THREE from 'three';
 import { Water } from 'three/addons/objects/Water.js';
+import {MOON_DIRECTION,moonDirectionForCamera} from './moon-direction.mjs';
 
-// Low in the southern sky, visible along the main downstream approach.
-// Share the direction with hull lighting and the moonlit water highlights.
-export const MOON_DIRECTION = new THREE.Vector3(.30,.26,.918).normalize();
+// Keep the moon in the right-hand sky and share its direction with hull
+// lighting and the moonlit water highlights.
+export {MOON_DIRECTION} from './moon-direction.mjs';
 
 // The sky is drawn at far depth using only camera rotation. A world-centred
 // sphere used to cross the far plane from the northern end of the river.
@@ -52,7 +53,9 @@ export function createNightSky(scene) {
   });
   const sky=new THREE.Mesh(new THREE.SphereGeometry(100,48,24),material);
   sky.name='infinite-night-sky';sky.renderOrder=-1000;sky.frustumCulled=false;scene.add(sky);
-  return {sky,update(time){material.uniforms.time.value=time;}};
+  const direction=material.uniforms.moonDirection.value,moonlight=new THREE.DirectionalLight(0x9cbce2,.62);
+  moonlight.name='moonlight';moonlight.position.copy(direction).multiplyScalar(1000);scene.add(moonlight);
+  return {sky,direction,moonlight,update(time,camera){material.uniforms.time.value=time;if(camera)moonDirectionForCamera(camera,direction);moonlight.position.copy(direction).multiplyScalar(1000);}};
 }
 
 function riverNormals(){
@@ -124,8 +127,9 @@ export function createNightWater(scene,mobile){
       float chop=pow(max(0.,noise.x*.5+noise.y*.5-.22),3.);
       outgoingLight+=vec3(.012,.021,.022)*chop;`);
   scene.add(water);
-  return {water,update(time,camera,sources){
+  return {water,update(time,camera,sources,moonDirection=MOON_DIRECTION){
     material.uniforms.time.value=time;
+    material.uniforms.sunDirection.value.copy(moonDirection);
     water.position.x=camera.position.x;water.position.z=camera.position.z;
     const nearest=sources.map(s=>({s,d:(s.x-camera.position.x)**2+(s.z-camera.position.z)**2})).sort((a,b)=>a.d-b.d).slice(0,count);
     for(let i=0;i<count;i++){const s=nearest[i]?.s;material.uniforms.riverLamps.value[i].set(s?.x||0,s?.y||0,s?.z||0,s?.power||0);material.uniforms.riverColors.value[i].set(s?.color||0);}

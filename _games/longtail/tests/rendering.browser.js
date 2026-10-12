@@ -5,7 +5,8 @@ import {RenderPass} from 'three/addons/postprocessing/RenderPass.js';
 import {UnrealBloomPass} from 'three/addons/postprocessing/UnrealBloomPass.js';
 import {FXAAPass} from 'three/addons/postprocessing/FXAAPass.js';
 import {SurfaceWakes} from '../src/effects.js';
-import {createNightWater} from '../src/night.js';
+import {createNightWater,createNightSky} from '../src/night.js';
+import {createDroneShow,DRONE_CUE} from '../src/drone-show.js';
 import {createNightBloom,createNightComposer,createNightFXAA} from '../src/postprocessing.js';
 import {VisibleLights,bridgeLightFixtures} from '../src/visible-lights.js';
 
@@ -96,6 +97,33 @@ function lightImage(lightScene,lightCamera){
   let energy=0,peak=0;for(let i=0;i<pixels.length;i+=4){const value=THREE.DataUtils.fromHalfFloat(pixels[i]);assert(Number.isFinite(value),'invalid light pixel');energy+=value;peak=Math.max(peak,value);}
   return {energy,peak,pixels};
 }
+check('moon stays visible in the right-hand sky across phone and desktop headings',()=>{
+ const s=new THREE.Scene(),sky=createNightSky(s),c=new THREE.PerspectiveCamera(62,1,.3,8000);
+ let minimum=Infinity;
+ for(const aspect of[390/844,16/9])for(const heading of[0,1.6,3.14,4.7]){
+  c.aspect=aspect;c.updateProjectionMatrix();c.position.set(600,12,-1400);c.lookAt(600+Math.sin(heading)*53,3,-1400+Math.cos(heading)*53);sky.update(12,c);
+  const {pixels}=lightImage(s,c);assert(invalidPixels(target)===0,'invalid sky pixels');
+  const x=Math.floor(size*.70),y=Math.floor(size*.77);let moon=0;
+  for(let dy=-2;dy<=2;dy++)for(let dx=-2;dx<=2;dx++)moon=Math.max(moon,THREE.DataUtils.fromHalfFloat(pixels[((y+dy)*size+x+dx)*4]));
+  minimum=Math.min(minimum,moon);assert(moon>.3,'moon not visible in expected right-hand sky');
+ }
+ sky.sky.geometry.dispose();sky.sky.material.dispose();return `8 launch views; minimum moon luminance ${minimum.toFixed(2)}`;
+});
+check('drones stay finite and visible while morphing, and respect building occlusion',()=>{
+ const s=new THREE.Scene();s.fog=new THREE.FogExp2(0,.00056);
+ const river={sample:(_d,offset=0)=>({x:0,z:offset,width:300,nx:0,nz:1})};
+ const show=createDroneShow(s,river,[{kind:'icon-siam',distance:100,side:1}],true),c=new THREE.PerspectiveCamera(62,1,.3,8000);
+ for(const distance of[400,1600]){
+  c.position.set(0,205,174+distance);c.lookAt(0,205,174);
+  for(let cue=0;cue<5;cue++)for(const phase of[4,17,22.999]){
+   show.update(cue*DRONE_CUE+phase);const {energy}=lightImage(s,c);
+   assert(invalidPixels(target)===0,'invalid drone pixel during morph');assert(energy>2,'drones disappeared in the distance');
+  }
+ }
+ const wall=new THREE.Mesh(new THREE.BoxGeometry(600,600,10),new THREE.MeshBasicMaterial({color:0}));wall.position.set(0,205,1200);s.add(wall);
+ assert(lightImage(s,c).energy===0,'drones shine through a solid building');
+ wall.geometry.dispose();wall.material.dispose();show.points.geometry.dispose();show.points.material.dispose();return '30 formation/distance views; opaque buildings hide the lights';
+});
 check('distant bulbs and strips remain visible at 250 to 2000 metres',()=>{
   const s=new THREE.Scene();s.fog=new THREE.FogExp2(0,.00056);
   const c=new THREE.PerspectiveCamera(62,1,.3,8000);
