@@ -1,10 +1,12 @@
 import * as THREE from 'three';
+import {placeNameSign,bridgeNames} from './signs.js';
 import {createNightSky,createNightWater} from './night.js';
 import {VisibleLights,collectLightFixture,transformLightFixtures,bridgeLightFixtures} from './visible-lights.js';
 import {createRiverfront} from './riverfront.js';
 import {createFountains} from './fountains.js';
 import {mergeGeometries} from 'three/addons/utils/BufferGeometryUtils.js';
 import {buildLandmark} from './landmarks.js';
+import {mappedBuildings,mappedBuildingById} from './mapped-architecture.js';
 import {project,clamp,pierCollider} from './river.mjs';
 
 const rnd=seed=>()=>{seed=(Math.imul(seed,1664525)+1013904223)>>>0;return seed/4294967296;};
@@ -49,6 +51,7 @@ export const LANDMARKS=[
  ['mandarin-oriental','Mandarin Oriental',100.5143499,13.7239264,-1],
  ['the-river','The River',100.5105286,13.7213726,1],
  ['state-tower','State Tower',100.516897,13.7215374,-1],
+ ...mappedBuildings.map(b=>[b.id,b.name,...b.center,b.side]),
 ];
 export function createWorld(scene,river,piers,mobile){
  const lightFixtures=[];
@@ -65,16 +68,21 @@ export function createWorld(scene,river,piers,mobile){
  const landmarks=[];
  for(const [kind,name,lon,lat,side]of LANDMARKS){
   const p=project(lon,lat),n=river.nearest(p.x,p.z);
-  const model=buildLandmark(kind),localBounds=new THREE.Box3().setFromObject(model);let offset=Math.max(n.offset*side,n.width/2+localBounds.max.z+12);let safe=river.sample(n.distance,side*offset);model.rotation.y=Math.atan2(-n.nx*side,-n.nz*side);
+  const geographic=mappedBuildingById.has(kind);
+  const model=buildLandmark(kind),localBounds=new THREE.Box3().setFromObject(model);let offset=geographic?n.offset*side:Math.max(n.offset*side,n.width/2+localBounds.max.z+12);let safe=river.sample(n.distance,side*offset);model.rotation.y=geographic?0:Math.atan2(-n.nx*side,-n.nz*side);
   for(let attempt=0;attempt<12;attempt++){model.position.set(safe.x,3,safe.z);model.updateMatrixWorld();let overlaps=false;for(const x of[localBounds.min.x,localBounds.max.x])for(const z of[localBounds.min.z,localBounds.max.z]){const corner=model.localToWorld(new THREE.Vector3(x,0,z)),bank=river.nearest(corner.x,corner.z);if(Math.abs(bank.offset)<bank.width/2+4)overlaps=true;}if(!overlaps)break;offset+=15;safe=river.sample(n.distance,side*offset);}buildings.add(model);
   if(kind==='wat-arun'||kind==='wat-kalayanamit'){const light=new THREE.SpotLight(0xffd9a0,kind==='wat-arun'?5500:3500,210,.78,.75,2);light.position.set(safe.x-n.nx*side*75,7,safe.z-n.nz*side*75);light.target.position.set(safe.x,28,safe.z);scene.add(light,light.target);}
-  const bounds=new THREE.Box3().setFromObject(model);landmarks.push({kind,name,x:safe.x,z:safe.z,distance:n.distance,bounds,side,reserveLength:(localBounds.max.x-localBounds.min.x)/2+22,inland:offset-localBounds.min.z+20});
+  const bounds=new THREE.Box3().setFromObject(model);landmarks.push({kind,name,x:safe.x,z:safe.z,distance:n.distance,bounds,side,reserveLength:geographic?Math.hypot(localBounds.max.x-localBounds.min.x,localBounds.max.z-localBounds.min.z)/2+40:(localBounds.max.x-localBounds.min.x)/2+22,inland:geographic?offset+Math.hypot(localBounds.max.x-localBounds.min.x,localBounds.max.z-localBounds.min.z)/2+70:offset-localBounds.min.z+20});
  }
  // Dense, varied riverside fabric; reserved landmark footprints are kept clear.
  const mats=Array.from({length:5},(_,i)=>[cityMaterial(i,4),cityMaterial(i,10),cityMaterial(i,22)]);const photo=new THREE.TextureLoader().load(`${import.meta.env.BASE_URL}textures/riverside-shophouses.png`);photo.colorSpace=THREE.SRGBColorSpace;photo.anisotropy=4;const shophouse=new THREE.MeshStandardMaterial({map:photo,color:0xa6a8a2,emissiveMap:photo,emissive:0xffd9a0,emissiveIntensity:.035,roughness:.95});const batch=new Batch(lightFixtures),roof=M(0x283239),market=M(0x7b4435),leaf=M(0x233f30),trunk=M(0x44352c);
  for(let d=20;d<river.length;d+=35){for(const side of [-1,1]){const riverPoint=river.sample(d);for(let row=0;row<3;row++){
   const width=18+random()*24,depth=20+random()*23,offset=side*(riverPoint.width/2+depth/2+12+row*110),p=river.sample(d+(random()-.5)*14,offset);let height=11+random()*25;
   if(row>0)height+=random()*45;if(d>river.length*.62&&random()>.72)height+=random()*90;const oldTown=d<river.length*.48;if(oldTown)height=6+random()*13+row*4;if(row===0&&oldTown)height=9+random()*4;
+  // The modern waterfront is defined by its mapped towers. Keep invented
+  // foreground buildings low so they cannot hide hotel facades and gardens.
+  if(!oldTown&&row===0)height=Math.min(height,24);
+  if(!oldTown&&row>0&&landmarks.some(l=>l.side===side&&Math.abs(d-l.distance)<l.reserveLength+65))height=Math.min(height,58);
   if(landmarks.some(l=>l.side===side&&Math.abs(d-l.distance)<l.reserveLength&&Math.abs(offset)<l.inland))continue;
   if(landmarks.some(l=>p.x>l.bounds.min.x-25&&p.x<l.bounds.max.x+25&&p.z>l.bounds.min.z-25&&p.z<l.bounds.max.z+25))continue;
   const fm=row===0&&height<22&&Math.floor(d/35)%5!==0?shophouse:mats[Math.floor(random()*5)][height<22?0:height<65?1:2];batch.box(fm,p.x,3+height/2,p.z,width,height,depth,p.heading);
@@ -89,16 +97,19 @@ export function createWorld(scene,river,piers,mobile){
  batch.finish(buildings);buildings.traverse(o=>{o.updateMatrix();o.matrixAutoUpdate=false;});
  // Recognisable steel Memorial Bridge, neighbouring Sky Park and concrete Taksin.
  const bridgeColliders=[];const bridgeGroups=[];
- function bridge(lat,lon,name,type){
+ function bridge(lat,lon,id,type){
   const p=project(lon,lat),n=river.nearest(p.x,p.z),g=new THREE.Group();g.position.set(n.x,0,n.z);g.rotation.y=Math.atan2(-n.nz,n.nx);scene.add(g);const b=new Batch(lightFixtures),span=n.width+200,h=type==='steel'?16:19,steel=M(type==='steel'?0x487962:0x646f7b);b.lightFixtures.push(...bridgeLightFixtures(span,h,type));
   b.box(steel,0,h,0,span,2.5,type==='steel'?17:29);for(const side of[-1,1]){const z=side*(type==='steel'?9:14.75);if(type==='steel'){
    b.box(steel,0,h+13,z,span,1.1,1.1);for(let x=-span/2;x<span/2;x+=30){b.box(steel,x,h+7,z,.7,12,.7);const beam=new THREE.BoxGeometry(1,1,1);const o=new THREE.Object3D();o.position.set(x+15,h+7,z);o.rotation.z=Math.atan2(30,12);o.scale.set(.65,Math.hypot(30,12),.65);o.updateMatrix();b.parts.set(steel,[...(b.parts.get(steel)||[]),beam.applyMatrix4(o.matrix)]);}}
   }
   for(const x of[-n.width*.27,n.width*.27]){b.box(steel,x,h/2,0,8,h,13);const v=new THREE.Vector3(x,0,0).applyMatrix4(g.matrixWorld);g.updateMatrixWorld();g.localToWorld(v.set(x,0,0));bridgeColliders.push({x:v.x,z:v.z,width:9,length:16,heading:g.rotation.y,mass:10000,vx:0,vz:0});}
   if(type==='concrete')b.box(steel,0,h+4,0,span,2,6);b.finish(g);
-  const label=sign(name,54,4.8);label.position.set(0,h+3.8,type==='steel'?9:15);g.add(label);bridgeGroups.push({group:g,span,height:h});
+  const names=bridgeNames[id],width=id==='taksin'?38:29;
+  for(const side of[-1,1]){const label=placeNameSign(names.thai,names.english,width,3.4);label.position.set(0,h+3.2,side*(type==='steel'?9.8:15.6));label.rotation.y=side<0?Math.PI:0;g.add(label);}
+  if(id==='pokklao'){const label=placeNameSign(bridgeNames.skypark.thai,bridgeNames.skypark.english,18,2.2);label.position.set(0,h+5.4,3.2);g.add(label);}
+  bridgeGroups.push({group:g,span,height:h});
  }
- bridge(13.7393,100.4976,'MEMORIAL BRIDGE','steel');bridge(13.73898,100.49851,'CHAO PHRAYA SKY PARK','concrete');bridge(13.7193,100.5121,'TAKSIN BRIDGE','concrete');
+ bridge(13.7393,100.4976,'memorial','steel');bridge(13.73898,100.49851,'pokklao','concrete');bridge(13.7193,100.5121,'taksin','concrete');
  const movingCars=new THREE.Group();scene.add(movingCars);const carBody=M(0x303842),carHead=new THREE.MeshBasicMaterial({color:new THREE.Color(0xffe2b5).multiplyScalar(2.2)}),carTail=new THREE.MeshBasicMaterial({color:new THREE.Color(0xff2712).multiplyScalar(1.9)});
  const carCount=bridgeGroups.length*10,carMeshes=[new THREE.InstancedMesh(unitBox,carBody,carCount),new THREE.InstancedMesh(unitBox,carHead,carCount*2),new THREE.InstancedMesh(unitBox,carTail,carCount*2)];carMeshes.forEach(m=>{m.instanceMatrix.setUsage(THREE.DynamicDrawUsage);m.frustumCulled=false;movingCars.add(m);});const carTransform=new THREE.Object3D();
  let lastCarUpdate=-1;
@@ -113,7 +124,7 @@ export function createWorld(scene,river,piers,mobile){
   for(const x of[-7.3,7.3])for(const z of[-3.7,3.7]){b.box(warm,x,3.8,z,.32,4.5,.32);b.box(rail,x,-.2,z,.65,3,.65);}
   b.box(glow,0,5.7,-4.8,17,.2,.22);
   // Small groups waiting under the pier canopy.
-  const skin=M(0xb58869),shirt=M([0x8bbfc1,0xd8ae68,0xa5604d][p.index%3]),pants=M(0x283644);for(let i=0;i<3;i++){const x=(i-1)*2.8,z=-.7+(i%2)*1.4;b.box(shirt,x,3.1,z,.57,.85,.34);b.add(new THREE.SphereGeometry(.22,7,6),skin,x,3.73,z,1,1.18,.96);for(const s of[-1,1]){b.box(pants,x+s*.15,2.35,z,.19,.75,.22);b.box(shirt,x+s*.38,3.05,z,.15,.65,.19);}}b.finish(g);const label=sign(p.name.toUpperCase(),15,2);label.position.set(0,5,-4.9);label.rotation.y=Math.PI;g.add(label);
+  const skin=M(0xb58869),shirt=M([0x8bbfc1,0xd8ae68,0xa5604d][p.index%3]),pants=M(0x283644);for(let i=0;i<3;i++){const x=(i-1)*2.8,z=-.7+(i%2)*1.4;b.box(shirt,x,3.1,z,.57,.85,.34);b.add(new THREE.SphereGeometry(.22,7,6),skin,x,3.73,z,1,1.18,.96);for(const s of[-1,1]){b.box(pants,x+s*.15,2.35,z,.19,.75,.22);b.box(shirt,x+s*.38,3.05,z,.15,.65,.19);}}b.finish(g);const label=placeNameSign(p.thai,p.name.toUpperCase()+(p.name.toLowerCase().includes('pier')?'':' PIER'),13,2,{pier:true});label.position.set(0,5,-4.9);label.rotation.y=Math.PI;g.add(label);
   // The water-side pickup is offset from the solid pontoon, leaving a clear berth.
   scene.add(g);bridgeColliders.push(dock);
   const ring=new THREE.Mesh(new THREE.RingGeometry(17.5,18.3,64),new THREE.MeshBasicMaterial({color:0xffbd66,transparent:true,opacity:.8,side:THREE.DoubleSide,depthWrite:false,toneMapped:false}));ring.rotation.x=-Math.PI/2;ring.position.set(p.x,.18,p.z);scene.add(ring);

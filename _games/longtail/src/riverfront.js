@@ -20,7 +20,7 @@ function venueSign(text,index){
  const key=`${text}:${index%3}`;if(venueMaterials.has(key))return new THREE.Mesh(venueGeometry,venueMaterials.get(key));
  const c=document.createElement('canvas');c.width=512;c.height=128;const ctx=c.getContext('2d');
  ctx.fillStyle='#090e13';ctx.fillRect(0,0,512,128);ctx.strokeStyle=['#dea353','#6ecfc1','#dd7160'][index%3];ctx.lineWidth=3;ctx.strokeRect(8,8,496,112);
- ctx.font='600 54px Arial';ctx.textAlign='center';ctx.textBaseline='middle';ctx.shadowColor=ctx.strokeStyle;ctx.shadowBlur=8;ctx.fillStyle=ctx.strokeStyle;ctx.fillText(text,256,66,466);
+ ctx.font='600 54px "Noto Sans Thai",Arial';ctx.textAlign='center';ctx.textBaseline='middle';ctx.shadowColor=ctx.strokeStyle;ctx.shadowBlur=8;ctx.fillStyle=ctx.strokeStyle;ctx.fillText(text,256,66,466);
  const texture=new THREE.CanvasTexture(c);texture.colorSpace=THREE.SRGBColorSpace;
  const m=new THREE.MeshStandardMaterial({map:texture,emissiveMap:texture,emissive:0xffffff,emissiveIntensity:2.1,roughness:.85});venueMaterials.set(key,m);return new THREE.Mesh(venueGeometry,m);
 }

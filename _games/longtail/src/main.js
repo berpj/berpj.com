@@ -21,6 +21,7 @@ import {RiverAudio} from './audio.js';
 import './style.css';
 import {createFrameMeter} from './frame-meter.js';
 import {RenderBudget} from './render-budget.mjs';
+import {renderNightFrame} from './render-frame.js';
 
 const $=s=>document.querySelector(s),mobile=matchMedia('(pointer:coarse)').matches||innerWidth<700;
 const boatIcon='<svg viewBox="0 0 40 40" fill="none" aria-hidden="true"><path d="M4 23h32l-7 9H13L4 23Z" stroke="currentColor" stroke-width="1.7"/><path d="m12 20 4-10h14l5 10M20 10v12M6 37q5-4 10 0t10 0t10 0" stroke="currentColor" stroke-width="1.7"/></svg>';
@@ -53,6 +54,7 @@ let scores=[];try{scores=cleanScores(JSON.parse(storage.getItem(RECORD_KEY)||'[]
 const best=()=>scores[0]?.score||0,money=v=>`฿ ${Math.round(v).toLocaleString()}`,time=v=>`${Math.floor(v/60).toString().padStart(2,'0')}:${Math.floor(v%60).toString().padStart(2,'0')}`;
 function records(){ $('#menu-best').textContent=money(best());$('#hud-best').textContent=money(best());const note=$('#menu-record-note');note.hidden=!scores.length;note.textContent=scores.length?`${scores[0].deliveries} fare${scores[0].deliveries===1?'':'s'}`:'';}
 records();
+let pendingSize=null;
 let frameMeter,fleet,fleetLights,towlines,renderBudget,smaa,fxaa,stillFrame=false;const boatLightPoint=new THREE.Vector3();
 let mode='menu',free=false,ready=false,shift,boat,river,piers,world,traffic=[],player,renderer,scene,camera,composer,wake,surfaceWakes;let countdown=0,simTime=0,accumulator=0,previousTime=0,arrowRotation=0,hudAge=0,slideTime=0,toastUntil=0,stuntUntil=0,crashCooldown=0,recorded=false,cameraHeading=0;let previous={x:0,z:0,heading:0};const cameraAim=new THREE.Vector3(),cameraPosition=new THREE.Vector3();const audio=new RiverAudio();
 const controls=new Controls({pause:force=>togglePause(force),horn:()=>audio.horn(),recover:()=>recover()});controls.bind();
@@ -122,7 +124,8 @@ function step(dt,input){
  const event=shift.update(dt,boat);if(event){audio.event(event.type);if(event.type==='pickup'){toast(`Next stop: ${event.to.name}. Let’s make waves!`,5);stunt('ALL ABOARD',event.to.name.toUpperCase());}if(event.type==='delivered'){stunt('NICE LANDING',`${money(event.paid)} BANKED · +12 SECONDS`);toast('Fare delivered. Choose any yellow pier for your next passengers.',6);}if(event.type==='late')toast('Missed the boat! Find your next passengers.',5);if(event.type==='ended')endShift();}
  if(Math.abs(boat.speed)>2){wake.emit(boat.x+Math.sin(boat.heading)*6,boat.z+Math.cos(boat.heading)*6,boat.heading,Math.abs(boat.speed),boat.boosting?1:.4);if(boat.drifting)wake.emit(boat.x,boat.z,boat.heading,Math.abs(boat.speed),.8);}
 }
-function animate(now){requestAnimationFrame(animate);const frameDt=(now-previousTime)/1000,dt=Math.min(frameDt||0,.05);previousTime=now;if(!ready)return;const input=controls.read();if(mode==='paused'||mode==='results'){if(!stillFrame){composer.render();stillFrame=true;}return;}stillFrame=false;simTime+=dt;if(mode==='countdown'){countdown-=dt;$('#countdown').textContent=countdown>1.5?'3':countdown>.7?'2':countdown>.1?'1':'GO!';if(countdown<=0){mode='playing';controls.enabled=true;$('#countdown').hidden=true;toast('Stop at any golden pier. Shift for boost. Space to swing the stern.',6);}}
+function drawFrame(frameDt=0,ratio=null){renderNightFrame(renderer,composer,{ratio,size:pendingSize,smaa,fxaa,frameMeter,frameDt});pendingSize=null;}
+function animate(now){requestAnimationFrame(animate);const frameDt=(now-previousTime)/1000,dt=Math.min(frameDt||0,.05);previousTime=now;if(!ready)return;const input=controls.read();if(mode==='paused'||mode==='results'){if(!stillFrame){drawFrame();stillFrame=true;}return;}stillFrame=false;simTime+=dt;if(mode==='countdown'){countdown-=dt;$('#countdown').textContent=countdown>1.5?'3':countdown>.7?'2':countdown>.1?'1':'GO!';if(countdown<=0){mode='playing';controls.enabled=true;$('#countdown').hidden=true;toast('Stop at any golden pier. Shift for boost. Space to swing the stern.',6);}}
  stepTraffic(dt);if(mode==='playing'){accumulator+=dt;let steps=0;while(mode==='playing'&&accumulator>=1/60&&steps++<4){step(1/60,input);accumulator-=1/60;}if(mode==='playing')audio.update(boat.speed,boat.boosting);else accumulator=0;}
  const fraction=mode==='playing'?clamp(accumulator/(1/60),0,1):1;
  if(mode!=='menu'){
@@ -130,7 +133,7 @@ function animate(now){requestAnimationFrame(animate);const frameDt=(now-previous
   player.position.set(x,.1+Math.sin(simTime*2.7)*.085+Math.sin(simTime*4.3)*.035,z);player.rotation.set((boat.boosting?.065:Math.abs(boat.speed)*.0007)+Math.sin(simTime*2)*.008,heading,clamp(boat.yaw*boat.speed*.003,-.12,.12));
   cameraHeading+=angleDelta(heading,cameraHeading)*(1-Math.exp(-4.5*dt));const distance=boat.boosting?24:19,desired=new THREE.Vector3(x+Math.sin(cameraHeading)*distance,7.8+(boat.boosting?1.2:0),z+Math.cos(cameraHeading)*distance);cameraPosition.lerp(desired,1-Math.exp(-8*dt));const ahead=new THREE.Vector3(x-Math.sin(cameraHeading)*26,3,z-Math.cos(cameraHeading)*26);cameraAim.lerp(ahead,1-Math.exp(-9*dt));camera.position.copy(cameraPosition);camera.lookAt(cameraAim);camera.fov=THREE.MathUtils.lerp(camera.fov,boat.boosting?69:62,1-Math.exp(-3*dt));camera.updateProjectionMatrix();
  }else{
-  const l=world.landmarks[free?6:0],p=river.sample(piers[free?8:0].distance-(free?330:140),-34),dx=l.x-p.x,dz=l.z-p.z,len=Math.hypot(dx,dz),rx=-dz/len,rz=dx/len;camera.position.set(p.x+Math.sin(simTime*.06)*8,11.5,p.z+Math.cos(simTime*.06)*6);camera.lookAt(l.x-rx*60,free?70:24,l.z-rz*60);player.position.set(p.x+dx/len*25-rx*7,.1+Math.sin(simTime*2)*.07,p.z+dz/len*25-rz*7);player.rotation.set(.008,Math.atan2(-dx,-dz),Math.sin(simTime)*.009);
+  const l=world.landmarks.find(l=>l.kind===(free?'icon-siam':'wat-arun')),p=river.sample(piers[free?8:0].distance-(free?330:140),-34),dx=l.x-p.x,dz=l.z-p.z,len=Math.hypot(dx,dz),rx=-dz/len,rz=dx/len;camera.position.set(p.x+Math.sin(simTime*.06)*8,11.5,p.z+Math.cos(simTime*.06)*6);camera.lookAt(l.x-rx*60,free?70:24,l.z-rz*60);player.position.set(p.x+dx/len*25-rx*7,.1+Math.sin(simTime*2)*.07,p.z+dz/len*25-rz*7);player.rotation.set(.008,Math.atan2(-dx,-dz),Math.sin(simTime)*.009);
  }
  if(player.userData.propeller)player.userData.propeller.rotation.z+=dt*(20+Math.abs(boat.speed)*6);if(player.userData.motor)player.userData.motor.rotation.y=-(input.steer||0)*.18;
  wake.update(dt);
@@ -142,10 +145,10 @@ function animate(now){requestAnimationFrame(animate);const frameDt=(now-previous
  const wakeActors=nearbyTraffic.slice(0,mobile?10:16).map(t=>t.actor);if(mode!=='menu')wakeActors.unshift(boat);
  fleetLights.update();surfaceWakes.update(dt,wakeActors);world.update(simTime,camera,shift,boatLights);if(mode==='menu')for(const p of world.pierVisuals){p.ring.visible=false;p.beacon.visible=false;}
  $('#stunt').hidden=mode!=='playing'||simTime>stuntUntil;$('#toast').style.opacity=mode!=='playing'||simTime>toastUntil?'0':'1';hudAge+=dt;if(hudAge>.09){hudAge=0;if(mode!=='menu')updateHUD();}
- frameMeter?.begin();composer.render();frameMeter?.end(frameDt);const ratio=renderBudget.update(frameDt);if(ratio!==null){renderer.setPixelRatio(ratio);composer.setPixelRatio(ratio);if(smaa){if(ratio<=1.1){smaa.enabled=false;fxaa.enabled=true;}else if(ratio>=1.25){smaa.enabled=true;fxaa.enabled=false;}}}
+ drawFrame(frameDt,renderBudget.update(frameDt));
 }
 async function init(){try{
- await document.fonts.ready;const response=await fetch(`${import.meta.env.BASE_URL}data/river-course.json`);if(!response.ok)throw new Error('Could not load the river map');const data=await response.json();
+ await document.fonts.load('600 32px "Noto Sans Thai"');await document.fonts.ready;const response=await fetch(`${import.meta.env.BASE_URL}data/river-course.json`);if(!response.ok)throw new Error('Could not load the river map');const data=await response.json();
  // Smooth interpolation prevents hard heading seams while preserving the measured course.
  const source=data.points,curve=new THREE.CatmullRomCurve3(source.map(p=>{const lat=13.733,lon=100.502;return new THREE.Vector3((p[0]-lon)*108140,0,(lat-p[1])*111320);}));const sampled=curve.getSpacedPoints(320),raw=new River(source),points=sampled.map(p=>[p.x/108140+100.502,13.733-p.z/111320,raw.nearest(p.x,p.z).width]);
  river=new River(points);piers=buildPiers(river);shift=new Shift(piers);boat=new BoatPhysics(piers[0].x,piers[0].z,piers[0].heading);scene=new THREE.Scene();scene.background=new THREE.Color(0x0a101b);scene.fog=new THREE.FogExp2(0x19202b,.00056);camera=new THREE.PerspectiveCamera(62,innerWidth/innerHeight,.3,8000);camera.layers.enable(1);
@@ -153,7 +156,7 @@ async function init(){try{
  scene.add(new THREE.HemisphereLight(0xa4bcd6,0x4a3e32,.82));const moon=new THREE.DirectionalLight(0x9cbce2,.62);moon.position.copy(MOON_DIRECTION).multiplyScalar(1000);scene.add(moon);const shore=new THREE.DirectionalLight(0xffd49c,.18);shore.position.set(500,220,150);scene.add(shore);
  world=createWorld(scene,river,piers,mobile);player=createBoat('longtail',0);scene.add(player);const engineLamp=new THREE.PointLight(0xffc991,3.5,7,2);engineLamp.position.set(0,1.65,4.5);player.add(engineLamp);wake=new Wake(scene,mobile);surfaceWakes=new SurfaceWakes(scene,mobile?30:46);makeTraffic();simplifyBoatReflections(world.water,traffic);
  composer=createNightComposer(renderer);composer.addPass(new RenderPass(scene,camera));composer.addPass(createNightBloom(innerWidth,innerHeight));if(!mobile){smaa=new SMAAPass();composer.addPass(smaa);}composer.addPass(new OutputPass());fxaa=new FXAAPass();fxaa.enabled=mobile;composer.addPass(fxaa);
- const resize=()=>{stillFrame=false;camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight);composer.setSize(innerWidth,innerHeight);};window.addEventListener('resize',resize);$('#scene').addEventListener('webglcontextlost',e=>{e.preventDefault();togglePause(true);toast('Graphics paused. Reload the page to restore the river.',100);});
+ const resize=()=>{stillFrame=false;camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();pendingSize={width:innerWidth,height:innerHeight};};window.addEventListener('resize',resize);$('#scene').addEventListener('webglcontextlost',e=>{e.preventDefault();togglePause(true);toast('Graphics paused. Reload the page to restore the river.',100);});
  frameMeter=createFrameMeter(renderer);ready=true;$('#start').disabled=false;$('#start').textContent='PLAY';$('#loading-note').textContent='';previousTime=performance.now();requestAnimationFrame(animate);
  }catch(error){console.error(error);$('#loading-note').textContent=`Unable to launch: ${error.message}. Try a browser with WebGL enabled.`;$('#start').textContent='RETRY';$('#start').disabled=false;$('#start').onclick=()=>location.reload();}}
 init();

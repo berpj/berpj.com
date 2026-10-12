@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import {renderNightFrame} from '../src/render-frame.js';
 import {FullScreenQuad} from 'three/addons/postprocessing/Pass.js';
 import {RenderPass} from 'three/addons/postprocessing/RenderPass.js';
 import {UnrealBloomPass} from 'three/addons/postprocessing/UnrealBloomPass.js';
@@ -141,6 +142,24 @@ check('main HDR rendering multisamples geometry before postprocessing',()=>{
  composer.render();assert(invalidPixels(rt)===0,'invalid pixels after resize');
  const samples=rt.samples;composer.dispose();m.geometry.dispose();m.material.dispose();
  return `${samples} samples, ${partial} partially covered edge pixels, adaptive resize passed`;
+});
+
+check('resolution changes present a drawn frame instead of a cleared black canvas',()=>{
+ renderer.setRenderTarget(null);
+ const s=new THREE.Scene();s.background=new THREE.Color(.15,.25,.35);
+ const c=new THREE.PerspectiveCamera(),composer=createNightComposer(renderer);composer.addPass(new RenderPass(s,c));
+ const pixel=()=>{const out=new Uint8Array(4);renderer.getContext().readPixels(20,20,1,1,renderer.getContext().RGBA,renderer.getContext().UNSIGNED_BYTE,out);return out[0]+out[1]+out[2];};
+ composer.render();assert(pixel()>30,'control scene is dark');
+ renderer.setPixelRatio(.9);assert(pixel()===0,'old post-render resize must reproduce a black drawing buffer');
+ const smaa={enabled:true},fxaa={enabled:false};
+ for(let i=0;i<60;i++){
+  const ratio=[1.5,1.35,1.2,1.05,.9,1.1,1.3][i%7];
+  renderNightFrame(renderer,composer,{ratio,size:{width:128+i%3,height:128+i%5},smaa,fxaa});
+  assert(pixel()>30,`black output after resolution change ${i}`);
+  assert(smaa.enabled||fxaa.enabled,'no antialiasing after quality change');
+ }
+ composer.dispose();renderer.setPixelRatio(1);renderer.setSize(size,size);
+ return 'old ordering reproduces black; 60 DPR/viewport/AA changes stay visible';
 });
 
 renderer.setRenderTarget(null);target.dispose();renderer.dispose();

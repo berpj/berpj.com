@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import {addMappedArchitecture,mappedBuildingById} from './mapped-architecture.js';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 
 // Architectural game models, in metres. The river-facing facade is local +Z.
@@ -340,8 +341,7 @@ function facetedTower(b, x, z, width, depth, height, floors, key) {
   b.cylinder(.825, .825, .55, x, height + 6, z, M.softLight, 8, [width / 2, 1, depth / 2]);
 }
 function iconSiam(b) {
-  facetedTower(b, -61, -60, 42, 38, 282, 78, 'icon-tower-a');
-  facetedTower(b, 43, -71, 35, 34, 224, 62, 'icon-tower-b');
+  // Residential towers use their separate OSM footprints and mapped heights.
   b.box(226, 3, 86, 0, 1.5, -3, M.stone);
   const glazing = windowsMaterial('icon-mall-glass', 42, 2, true);
   for (let tier = 0; tier < 4; tier++) {
@@ -516,7 +516,7 @@ const builders = {
 export const landmarkDimensions = Object.freeze({
   'wat-arun': { width: 102, depth: 89, height: 76 },
   'wat-pho': { width: 148, depth: 112, height: 42 },
-  'icon-siam': { width: 230, depth: 142, height: 288 },
+  'icon-siam': { width: 230, depth: 96, height: 39 },
   'the-river': { width: 140, depth: 70, height: 229 },
   'state-tower': { width: 77, depth: 53, height: 249 },
   'santa-cruz': { width: 35, depth: 56, height: 37 },
@@ -527,8 +527,8 @@ export const landmarkDimensions = Object.freeze({
 });
 
 export function buildLandmark(kind) {
-  if (!builders[kind]) throw new Error(`Unknown river landmark: ${kind}`);
-  if (!models.has(kind)) { const b = new Building(kind); builders[kind](b); models.set(kind, b.finish()); }
+  if (!builders[kind]&&!mappedBuildingById.has(kind)) throw new Error(`Unknown river landmark: ${kind}`);
+  if (!models.has(kind)) { const b = new Building(kind); if(mappedBuildingById.has(kind))addMappedArchitecture(b,mappedBuildingById.get(kind),M);else builders[kind](b); models.set(kind, b.finish()); }
   // Geometry/material are intentionally shared by clones, just like instanced assets.
   return models.get(kind).clone(true);
 }

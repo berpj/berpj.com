@@ -36,6 +36,9 @@ Scores use `bangkok-longtail:scores:v1` in localStorage, separate from Tuk Tuk. 
 - `src/riverfront.js`: restaurant terraces, Thai signage, festoon lights and instanced animated pedestrians.
 - `src/fountains.js`: animated illuminated water jets at ICONSIAM.
 - `src/landmarks.js`: merged architectural landmark meshes.
+- `src/mapped-architecture.js`: six riverside hotels/condos with original OSM footprints, mapped condo heights and authored facade/crown details.
+- `src/signs.js`: Thai-first bridge and pier enamel plates using bundled Noto Sans Thai.
+- `src/render-frame.js`: applies adaptive resolution and viewport changes before drawing, preventing cleared black canvas frames.
 - `src/boats.js`: curved wooden long-tail and four distinct river traffic classes.
 - `src/cargo.js`: low-draw-call tugboats and covered cargo barges with towing hardware.
 - `src/traffic.mjs`: denser traffic, speed following and articulated three/four-barge convoys. Every hull has its own collision capsule; tow gaps remain open.
@@ -54,12 +57,12 @@ The main HDR scene uses up to 2× MSAA when supported, including at reduced pixe
 
 For local rendering measurements, open `/longtail/?stats` on the Vite dev server. The visible readout includes every reflection and postprocessing draw. It is removed from production builds.
 
-For GPU regression checks, open `/longtail/tests/rendering.html` on the dev server. Its eight checks execute the actual shaders, exercise wake UV roundoff and water reflectance boundaries, reproduce NaN propagation in an unprotected bloom pass, and verify that the protected pass contains it without changing normal lighting. They also check distant lights at 250-2000 m, stable strip brightness during subpixel camera movement, solid occlusion and camera clipping. These development fixtures are not included in the production build.
+For GPU regression checks, open `/longtail/tests/rendering.html` on the dev server. Its eleven checks execute the actual shaders, exercise wake UV roundoff and water reflectance boundaries, reproduce NaN propagation in an unprotected bloom pass, and verify that the protected pass contains it without changing normal lighting. They also check distant lights at 250-2000 m, stable strip brightness during subpixel camera movement, solid occlusion and camera clipping. A black-frame regression reproduces the previous after-draw resize bug, then verifies 60 resolution/viewport changes. `/longtail/tests/architecture.html` provides landmark/sign views and a 90-frame full-scene resolution stress check. These development fixtures are not included in the production build.
 
 ## Geographic and asset scope
 
-River centreline and widths are derived from OpenStreetMap, with source queries/raw extracts/reproduction script retained. See `public/data/README.md`. Landmarks use approximate recognisable architectural meshes, aligned behind smoothed riverbanks; they are not surveyed digital twins. The 280 m optional upstream approach width is authored, the Wat Arun to Taksin section is derived from shoreline data. Boarding points are gameplay positions, not actual navigation aids.
+River centreline and widths are derived from OpenStreetMap, with source queries/raw extracts/reproduction script retained. See `public/data/README.md`. Six modern landmarks use OSM building footprints in their original geographic orientation: Millennium Hilton, The Peninsula, Royal Orchid Sheraton, Shangri-La, Magnolias Waterfront and The Residences at Mandarin Oriental. The two condo heights come from OSM; hotel heights and crown details are approximate, with their sources recorded in `public/data/riverside-buildings.json`. Landmark placement is adjusted only where necessary to clear smoothed riverbanks; models are not surveyed digital twins or photogrammetric scans. The ICONSIAM mall retains its authored terraced/gold facade with its towers now separate. Generic foreground blocks are lower around the modern waterfront to preserve the real skyline. The 280 m optional upstream approach width is authored, the Wat Arun to Taksin section is derived from shoreline data. Boarding points are gameplay positions, not actual navigation aids.
 
 The intended bridge is Taksin/Sathorn, which connects to Krung Thon Buri Road beside The River; it is not Krung Thon Bridge farther north.
 
-The music is “Exit the Premises” by Kevin MacLeod, CC BY 4.0. Full credit, source links and transcode details are visible in `public/credits.html` and `public/audio/provenance.json`. Barlow fonts are SIL OFL. Riverside shop texture is reused generated art from the existing game, with provenance bundled. All boats, other building surfaces and sound effects are original procedural work.
+The music is “Exit the Premises” by Kevin MacLeod, CC BY 4.0. Full credit, source links and transcode details are visible in `public/credits.html` and `public/audio/provenance.json`. Barlow and Noto Sans Thai fonts are SIL OFL. Riverside shop texture is reused generated art from the existing game, with provenance bundled. All boats, other building surfaces and sound effects are original procedural work.
