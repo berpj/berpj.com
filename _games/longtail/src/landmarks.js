@@ -1,17 +1,12 @@
 import * as THREE from 'three';
 import {facadeMaterial,facadeHash as hash} from './facade-materials.js';
 import {addMappedArchitecture,mappedBuildingById} from './mapped-architecture.js';
-import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
+import {Building as ArchitectureMesh} from './architecture-mesh.js';
 
 // Architectural game models, in metres. The river-facing facade is local +Z.
 // Static parts are merged by material to keep a whole landmark inexpensive.
 const materials = new Map();
 const models = new Map();
-const V = new THREE.Vector3();
-const E = new THREE.Euler();
-const Q = new THREE.Quaternion();
-const S = new THREE.Vector3(1, 1, 1);
-const T = new THREE.Matrix4();
 const c = (key, color, extra = {}) => {
   if (!materials.has(key)) materials.set(key, new THREE.MeshStandardMaterial({ color, roughness: .78, ...extra }));
   return materials.get(key);
@@ -26,6 +21,7 @@ const M = {
   tile: c('tile', '#973c27'), tileGreen: c('tileGreen', '#296657'),
   red: c('red', '#7f2920'), teal: c('teal', '#347b72'),
   dark: c('dark', '#171e24'), bronze: c('bronze', '#625448', { metalness: .55, roughness: .35 }),
+  leaf: c('leaf', '#284331', {side:THREE.DoubleSide}), pool: c('pool', '#294b50', {metalness:.25,roughness:.22}),
   roof: c('roof', '#473f37'), redBrick: c('redBrick', '#a77963'),
   glass: c('glass', '#33464c', { roughness: .27, metalness: .4 }),
   window: c('window', '#ad9c72', { emissive: '#ddac59', emissiveIntensity: .55 }),
@@ -55,38 +51,8 @@ function signMaterial(label, color = '#fff1c0', background = '#29261e') {
   return c(key, '#ffffff', { map, emissiveMap: map, emissive: color, emissiveIntensity: .85, roughness: .55 });
 }
 
-class Building {
-  constructor(kind) { this.kind = kind; this.parts = new Map(); }
-  add(geometry, material, x = 0, y = 0, z = 0, rotation = [0, 0, 0], scale = [1, 1, 1]) {
-    V.set(x, y, z); E.set(...rotation); Q.setFromEuler(E); S.set(...scale); T.compose(V, Q, S);
-    geometry.applyMatrix4(T);
-    if (geometry.index) { const old = geometry; geometry = old.toNonIndexed(); old.dispose(); }
-    geometry.deleteAttribute('tangent');
-    if (!this.parts.has(material)) this.parts.set(material, []);
-    this.parts.get(material).push(geometry);
-  }
-  box(w, h, d, x, y, z, material = M.stone, rotation = [0, 0, 0]) { this.add(new THREE.BoxGeometry(w, h, d), material, x, y, z, rotation); }
-  cylinder(rt, rb, h, x, y, z, material = M.stone, sides = 16, scale = [1, 1, 1]) { this.add(new THREE.CylinderGeometry(rt, rb, h, sides), material, x, y, z, [0, 0, 0], scale); }
-  sphere(r, x, y, z, material = M.gold, scale = [1, 1, 1]) { this.add(new THREE.SphereGeometry(r, 16, 10), material, x, y, z, [0, 0, 0], scale); }
-  line(a, b, radius = .12, material = M.gold, sides = 6) {
-    const delta = new THREE.Vector3(...b).sub(new THREE.Vector3(...a));
-    const geo = new THREE.CylinderGeometry(radius, radius, delta.length(), sides);
-    geo.applyQuaternion(new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0, 1, 0), delta.normalize()));
-    this.add(geo, material, (a[0] + b[0]) / 2, (a[1] + b[1]) / 2, (a[2] + b[2]) / 2);
-  }
-  sign(label, w, h, x, y, z, color, background) { this.add(new THREE.PlaneGeometry(w, h), signMaterial(label, color, background), x, y, z); }
-  finish() {
-    const group = new THREE.Group(); group.name = `landmark:${this.kind}`;
-    for (const [material, geometries] of this.parts) {
-      const merged = mergeGeometries(geometries, false);
-      for (const g of geometries) g.dispose();
-      merged.computeBoundingSphere();
-      const mesh = new THREE.Mesh(merged, material); mesh.castShadow = true; mesh.receiveShadow = true;
-      group.add(mesh);
-    }
-    group.userData.landmark = this.kind;
-    return group;
-  }
+class Building extends ArchitectureMesh {
+  sign(label,w,h,x,y,z,color,background){this.add(new THREE.PlaneGeometry(w,h),signMaterial(label,color,background),x,y,z);}
 }
 
 function stairs(b, x, z, width, rise, run, steps, direction = 1, base = 0) {
@@ -95,7 +61,7 @@ function stairs(b, x, z, width, rise, run, steps, direction = 1, base = 0) {
     b.box(width, h, run / steps + .03, x, base + h / 2, z + direction * (run / 2 - (i + .5) * run / steps), M.stone);
   }
 }
-function pitchedRoof(b, x, y, z, width, depth, height, material = M.tile) {
+function straightRoof(b, x, y, z, width, depth, height, material = M.tile) {
   const slope = Math.atan2(height, width / 2), length = Math.hypot(width / 2, height);
   for (const side of [-1, 1]) {
     b.box(length + .25, .45, depth, x + side * width / 4, y + height / 2, z, material, [0, 0, -side * slope]);
@@ -112,6 +78,32 @@ function pitchedRoof(b, x, y, z, width, depth, height, material = M.tile) {
     b.sphere(.65, x, y + height * .49, z + end * (depth / 2 + .12), M.gold, [1, 1, .15]);
   }
 }
+function pitchedRoof(b,x,y,z,width,depth,height,material=M.tile){
+ if(material!==M.tile&&material!==M.tileGreen){straightRoof(b,x,y,z,width,depth,height,material);return;}
+ const segments=10,profile=t=>height*Math.pow(1-t,1.6)+.55*Math.pow(t,9);
+ for(const side of[-1,1]){
+  const shape=new THREE.Shape();shape.moveTo(0,height);
+  for(let i=1;i<=segments;i++)shape.lineTo(side*width/2*i/segments,profile(i/segments));
+  for(let i=segments;i>=0;i--)shape.lineTo(side*width/2*i/segments,profile(i/segments)-.35);
+  shape.closePath();b.add(new THREE.ExtrudeGeometry(shape,{depth,bevelEnabled:false}),material,x,y,z-depth/2);
+  for(const end of[-1,1])for(let i=0;i<segments;i++)b.line([x+side*width/2*i/segments,y+profile(i/segments)+.06,z+end*depth/2],[x+side*width/2*(i+1)/segments,y+profile((i+1)/segments)+.06,z+end*depth/2],.145,M.gold);
+  b.line([x+side*width/2,y+.6,z-depth/2],[x+side*width/2,y+.6,z+depth/2],.15,M.gold);
+  for(let i=2;i<segments;i++)b.line([x+side*width/2*i/segments,y+profile(i/segments)+.025,z-depth/2],[x+side*width/2*i/segments,y+profile(i/segments)+.025,z+depth/2],.045,i%3===0?M.gold:material,4);
+ }
+ b.line([x,y+height+.13,z-depth/2],[x,y+height+.13,z+depth/2],.22,M.gold);
+ for(const end of[-1,1]){
+  const shape=new THREE.Shape();shape.moveTo(-width/2,.2);shape.lineTo(width/2,.2);
+  for(let i=segments;i>=0;i--)shape.lineTo(width/2*i/segments,profile(i/segments)-.35);
+  for(let i=1;i<=segments;i++)shape.lineTo(-width/2*i/segments,profile(i/segments)-.35);
+  shape.closePath();b.add(new THREE.ShapeGeometry(shape),M.red,x,y,z+end*(depth/2-.12),[0,end<0?Math.PI:0,0]);
+  const finial=new THREE.CatmullRomCurve3([new THREE.Vector3(x,y+height,z+end*depth/2),new THREE.Vector3(x,y+height+1.4,z+end*(depth/2+.3)),new THREE.Vector3(x,y+height+2.9,z+end*(depth/2+1.2)),new THREE.Vector3(x,y+height+3.2,z+end*(depth/2+1.85))]);
+  b.add(new THREE.TubeGeometry(finial,9,.13,5,false),M.gold);
+  for(const side of[-1,1])b.line([x+side*width/2,y+.55,z+end*depth/2],[x+side*(width/2+.35),y+1.55,z+end*(depth/2+.4)],.12,M.gold);
+  b.sphere(.65,x,y+height*.42,z+end*(depth/2+.08),M.gold,[1,1,.16]);
+  for(let i=0;i<7;i++){const a=i*Math.PI/3.5;b.line([x,y+height*.42,z+end*(depth/2+.10)],[x+Math.sin(a)*1.35,y+height*.42+Math.cos(a)*1.35,z+end*(depth/2+.10)],.065,M.gold,4);}
+ }
+}
+
 function thaiHall(b, x, z, width = 21, depth = 38, scale = 1, accent = M.tile) {
   const w = width * scale, d = depth * scale, h = 8 * scale;
   b.box(w + 4, 1.1, d + 4, x, .55, z, M.oldStone);
@@ -129,6 +121,7 @@ function thaiHall(b, x, z, width = 21, depth = 38, scale = 1, accent = M.tile) {
   pitchedRoof(b, x, h + 1, z, w + 5 * scale, d + 6 * scale, 6.5 * scale, accent);
   pitchedRoof(b, x, h + 4 * scale, z, w + .6 * scale, d - 2 * scale, 6.4 * scale, accent);
   pitchedRoof(b, x, h + 7 * scale, z, w - 4 * scale, d - 10 * scale, 5.6 * scale, accent);
+  stairs(b,x,z+d/2+3.5,w*.4,1.2,3.2,6,1);
   for (const side of [-1, 1]) b.box(.18, .22, d + 4, x + side * (w / 2 + 1.5), 1.2, z, M.warm);
 }
 
@@ -270,11 +263,15 @@ function chedi(b, x, z, height, radius, material = M.gold) {
   b.cylinder(0, radius * .13, height * .19, x, height * .905, z, material, 12);
 }
 function gardenWall(b, width, depth, z = 0) {
+  for(const x of[-4,4]){b.box(1.3,5.4,1.6,x,2.7,z+depth/2,M.porcelain);b.box(1.7,.5,2,x,5.3,z+depth/2,M.gold);}
+  pitchedRoof(b,0,5.5,z+depth/2,11,4,3.2,M.tileGreen);
   for (const side of [-1, 1]) {
     b.box(.65, 1.8, depth, side * width / 2, .9, z, M.plaster);
-    b.box(width, 1.8, .65, 0, .9, z + side * depth / 2, M.plaster);
+    if(side<0)b.box(width,1.8,.65,0,.9,z-depth/2,M.plaster);
+    else for(const edge of[-1,1])b.box((width-7)/2,1.8,.65,edge*(width+7)/4,.9,z+depth/2,M.plaster);
   }
   for (let x = -width / 2; x <= width / 2; x += 6) {
+    if(Math.abs(x)<6)continue;
     b.box(.85, 2.25, .85, x, 1.12, z + depth / 2, M.plaster);
     b.cylinder(0, .62, .8, x, 2.65, z + depth / 2, M.gold, 4);
   }
@@ -328,56 +325,129 @@ function facetedTower(b, x, z, width, depth, height, floors, key) {
   b.cylinder(.82, 1, 6, x, height + 3, z, M.dark, 8, [width / 2, 1, depth / 2]);
   b.cylinder(.825, .825, .55, x, height + 6, z, M.softLight, 8, [width / 2, 1, depth / 2]);
 }
-function iconSiam(b) {
-  // Residential towers use their separate OSM footprints and mapped heights.
-  b.box(226, 3, 86, 0, 1.5, -3, M.stone);
-  const glazing = windowsMaterial('icon-mall-glass', 42, 2, true);
-  for (let tier = 0; tier < 4; tier++) {
-    const w = 218 - tier * 12, d = 78 - tier * 10, y = 4 + tier * 7;
-    b.box(w, 7, d, 0, y + 3.5, -tier * 4, glazing);
-    b.box(w + 4, .85, d + 3, 0, y + 7.1, -tier * 4, M.white);
-    b.box(w + 4, .16, .18, 0, y + 6.55, -tier * 4 + d / 2 + 1.55, M.softLight);
-  }
-  // The river facade's pleated gold envelope and tapering glass pavilions.
-  for (let x = -104; x <= 104; x += 5) {
-    const h = 24 + 7 * Math.sin((x + 110) * .035);
-    b.box(1.15, h, 1.1, x, 4 + h / 2, 38.2, M.gold, [0, x % 10 ? .35 : -.35, 0]);
-  }
-  for (const x of [-68, 0, 68]) {
-    b.cylinder(12, 18, 11, x, 31, -5, M.glass, 4, [1.5, 1, 1]);
-    b.cylinder(12.4, 12.4, .6, x, 36.5, -5, M.gold, 4, [1.5, 1, 1]);
-  }
-  b.box(70, 6.5, 1, 0, 31.5, 39.4, M.dark);
-  b.sign('ICONSIAM', 64, 6, 0, 31.5, 40, '#fff0c2', '#28231b');
-  for (let x = -106; x < 112; x += 8) {
-    b.cylinder(.24, .35, 5, x, 2.5, 47, M.bronze, 8);
-    b.sphere(.48, x, 5.2, 47, M.warm);
-  }
-  stairs(b, 0, 47, 200, 3, 9, 8, 1);
+function surface(b, vertices, material, uv) {
+  const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.Float32BufferAttribute(vertices.flat(),3));
+  g.setAttribute('uv',new THREE.Float32BufferAttribute(uv||[0,0,1,0,1,1,0,1],2));g.setIndex([0,1,2,0,2,3]);g.computeVertexNormals();b.add(g,material);
 }
-function curvedCondo(b, x, z, width, depth, height, floors, key, lean = 0) {
-  const glass = windowsMaterial(key, Math.max(18,Math.round(Math.PI*(width+depth)/2/5.4)), floors);
-  b.cylinder(1, 1, height, x, height / 2, z, glass, 28, [width / 2, 1, depth / 2]);
-  for (let floor = 0; floor <= floors; floor++) {
-    const y = Math.max(.23, floor * height / floors);
-    const bulge = Math.sin(floor / floors * Math.PI) * 1.3;
-    b.cylinder(1, 1, .28, x + Math.sin(floor / floors * Math.PI) * lean, y, z, M.concrete, 28, [width / 2 + 1.2 + bulge, 1, depth / 2 + 1]);
-    if(floor<floors)b.add(new THREE.CylinderGeometry(1,1,.82,28,1,true),M.glass,x+Math.sin(floor/floors*Math.PI)*lean,y+.63,z,[0,0,0],[width/2+1.1+bulge,1,depth/2+.95]);
+function planSlab(b,points,y,height,material){
+ const shape=new THREE.Shape(points.map(([x,z])=>new THREE.Vector2(x,-z)));
+ const g=new THREE.ExtrudeGeometry(shape,{depth:height,bevelEnabled:false,curveSegments:1});g.rotateX(-Math.PI/2);b.add(g,material,0,y,0);
+}
+function planter(b,x,y,z,w=7,d=2){
+ b.box(w,.7,d,x,y+.35,z,M.oldStone);b.box(w-.3,.8,d-.2,x,y+1,z,M.leaf);
+}
+function palm(b,x,y,z,height=6){
+ b.cylinder(.14,.27,height,x,y+height/2,z,M.bronze,6);
+ for(let i=0;i<7;i++){const a=i*Math.PI*2/7,tip=[x+Math.sin(a)*2.5,y+height-.6,z+Math.cos(a)*2.5];
+  const cross=[Math.cos(a)*.55,0,-Math.sin(a)*.55];
+  surface(b,[[x,y+height,z],[tip[0]+cross[0],tip[1]+.25,tip[2]+cross[2]],[tip[0],tip[1]-.4,tip[2]],[tip[0]-cross[0],tip[1]+.25,tip[2]-cross[2]]],M.leaf);
+ }
+}
+function mallGlazing(){
+ if(materials.has('icon-retail-glass'))return materials.get('icon-retail-glass');
+ const paint=(ctx,w,h,emission)=>{
+  ctx.fillStyle=emission?'#050709':'#243940';ctx.fillRect(0,0,w,h);const bay=w/18;
+  for(let i=0;i<18;i++){
+   const x=i*bay+5,ww=bay-10,gradient=ctx.createLinearGradient(0,0,0,h);
+   gradient.addColorStop(0,emission?'#806a43':'#867a62');gradient.addColorStop(.48,emission?'#4c4433':'#4b5554');gradient.addColorStop(1,emission?'#262720':'#243338');ctx.fillStyle=gradient;ctx.fillRect(x,23,ww,h-41);
+   ctx.fillStyle=emission?'#171e1d':'#293338';ctx.fillRect(x+ww*.10,h*.66,ww*.26,h*.26);ctx.fillRect(x+ww*.57,h*.54,ww*.24,h*.35);
+   ctx.fillStyle=emission?'#aa8d60':'#c5b48e';ctx.fillRect(x+7,30,ww-14,5);ctx.fillRect(x+ww*.15,h*.70,ww*.14,9);
+   ctx.fillStyle=emission?'#101515':'#8a8b7b';ctx.fillRect(x+ww*.5,0,2,h);
+   ctx.fillStyle=emission?'#050709':'#323d40';ctx.fillRect(x,0,ww,21);ctx.fillRect(x,h*.49,ww,5);
   }
-  for (const side of [-1, 1]) b.box(1.35, height + 2, 1.8, x + side * width * .43, (height + 2) / 2, z + depth * .22, M.white);
-  b.cylinder(.85, 1, 7, x, height + 3.5, z, M.white, 28, [width / 2, 1, depth / 2]);
-  b.cylinder(.855, .855, .4, x, height + 7.1, z, M.softLight, 28, [width / 2, 1, depth / 2]);
+ };
+ const map=canvasTexture(2048,512,(ctx,w,h)=>paint(ctx,w,h,false)),emissiveMap=canvasTexture(2048,512,(ctx,w,h)=>paint(ctx,w,h,true));
+ return c('icon-retail-glass','#e1e3d5',{map,emissiveMap,emissive:'#ffdeaa',emissiveIntensity:.72,metalness:.25,roughness:.29});
+}
+function iconSiam(b) {
+ // River-facing stepped terraces and folded glass, derived from exterior views.
+ // The two residential towers remain separate, geographically mapped buildings.
+ b.box(228,2.3,91,0,1.15,-1,M.stone);
+ const glazing=mallGlazing();
+ for(let tier=0;tier<4;tier++){
+  const w=222-tier*11,front=39-tier*8.4,back=-43,y=2.4+tier*7.1,h=6.65;
+  b.box(w,h,front-3.3-back,0,y+h/2,(front-3.3+back)/2,M.glass);
+  const bays=18,step=w/bays,points=[];
+  for(let i=0;i<=bays;i++)points.push([-w/2+i*step,front+(i%2?-.5:1.9)]);
+  for(let i=0;i<bays;i++){
+   const [x0,z0]=points[i],[x1,z1]=points[i+1],lean=tier===0?.1:1.8;
+   surface(b,[[x0,y,z0],[x1,y,z1],[x1-lean*Math.sign(x1),y+h,z1-1.35],[x0-lean*Math.sign(x0),y+h,z0-1.35]],glazing,[i/bays,0,(i+1)/bays,0,(i+1)/bays,1,i/bays,1]);
+   b.line([x0,y,z0+.06],[x0-lean*Math.sign(x0),y+h,z0-1.29],.105,M.bronze);
+  }
+  // Every terrace is a closed slab, with planting and a recessed railing.
+  const plan=[[-w/2-1.2,back],[w/2+1.2,back],[w/2+1.2,front+3.4],[-w/2-1.2,front+3.4]];
+  planSlab(b,plan,y+h,.52,M.white);
+  for(let x=-w/2+8;x<w/2-4;x+=18){planter(b,x,y+h+.52,front+1.4,11,1.8);if(tier>0&&Math.round(x)%3===0)palm(b,x,y+h+1.2,front+.9,3);}
+  b.line([-w/2,y+h+1.6,front+3.05],[w/2,y+h+1.6,front+3.05],.06,M.bronze);
+  b.box(w,.16,.13,0,y+h-.15,front+3.5,M.softLight);
+ }
+ // Two sweeping gilded petals form the roof crown above the glass terraces.
+ for(const [cx,width,rise]of[[-55,98,9],[48,102,7.4]]){
+  const steps=22;
+  for(let i=0;i<steps;i++){
+   const t0=i/steps,t1=(i+1)/steps,x0=cx+(t0-.5)*width,x1=cx+(t1-.5)*width;
+   const y0=31.4+Math.sin(t0*Math.PI)*rise,y1=31.4+Math.sin(t1*Math.PI)*rise;
+   surface(b,[[x0,y0,13],[x1,y1,13],[x1,y1+.7,-14],[x0,y0+.7,-14]],M.gold);
+   surface(b,[[x0,y0-.75,13],[x1,y1-.75,13],[x1,y1,13],[x0,y0,13]],M.gold);
+   surface(b,[[x0,y0-.7,-14],[x1,y1-.7,-14],[x1,y1-.75,13],[x0,y0-.75,13]],M.bronze);
+   b.line([x0,y0,13.1],[x1,y1,13.1],.17,M.softLight);
+  }
+ }
+ // Narrow brand fascia, broad shop portals, and a glazed central entrance.
+ b.sign('ICONSIAM',40,4.2,-54,32.8,17,'#efdfaa','#3b3930');
+ for(const x of[-87,-61,-35,37,63,89]){b.box(20,5.4,.32,x,5.25,41.1,M.dark);b.box(16,4.5,.15,x,5.05,41.32,windowsMaterial('icon-shopfront',4,1,true));b.box(20,.4,.5,x,8.1,41.2,M.bronze);}
+ for(const x of[-10,10])b.box(.4,12,1.6,x,8.5,41.7,M.bronze);
+ b.box(24,.6,6,0,9.4,42,M.white);b.box(22,.6,7.4,0,2.1,44,M.oldStone);
+ for(let x=-103;x<=105;x+=26){palm(b,x,2.4,42.5,7.5);b.box(6.8,.45,2.7,x+8,2.7,43,M.white);}
+ stairs(b,0,47,211,2.3,6,7,1);
+}
+
+function riverTower(b,x,z,width,depth,height,floors,key,mirror=1){
+ const base=13.1,wall=facadeMaterial(key,{columns:12,rows:floors,style:'condo',stone:'#5d7779',glass:'#26474c',width:1024,height:2048});
+ // Broad curved curtain wall meets a comparatively flat, recessed balcony face.
+ // It is a closed sculpted slab, not a round tower with rings wrapped around it.
+ const front=[],back=[],segments=18;
+ for(let i=0;i<=segments;i++){const u=i/segments*2-1;front.push([x+u*width/2,z+depth*(.46-.40*u*u)]);}
+ for(let i=0;i<=8;i++){const u=1-i/8*2;back.push([x+u*width/2,z-depth*.36+Math.abs(u)*depth*.20]);}
+ const outline=[...front,...back],crownY=px=>base+height+5+mirror*(px-x)/width*6;
+ for(let i=0;i<outline.length;i++){
+  const a=outline[i],c=outline[(i+1)%outline.length],len=Math.hypot(c[0]-a[0],c[1]-a[1]);if(len<.05)continue;
+  const isFront=i<segments,topA=crownY(a[0]),topC=crownY(c[0]);
+  surface(b,[[a[0],base,a[1]],[c[0],base,c[1]],[c[0],topC,c[1]],[a[0],topA,a[1]]],wall,[i/segments,0,(i+1)/segments,0,(i+1)/segments,1,i/segments,1]);
+  for(let f=1;f<floors;f++){
+   const y=base+f*height/floors;
+   if(isFront){if(f%3===0)b.line([a[0],y,a[1]+.08],[c[0],y,c[1]+.08],.085,M.concrete,4);}
+   else{
+    const angle=Math.atan2(a[1]-c[1],c[0]-a[0]),nx=Math.sin(angle),nz=Math.cos(angle),mx=(a[0]+c[0])/2,mz=(a[1]+c[1])/2;
+    b.box(len+.04,.24,1.5,mx+nx*.5,y,mz+nz*.5,M.white,[0,angle,0]);
+    b.box(len-.08,.92,.12,mx+nx*1.15,y+.65,mz+nz*1.15,M.glass,[0,angle,0]);
+   }
+  }
+  b.line([a[0],base,a[1]],[a[0],topA,a[1]],isFront?.085:.28,isFront?M.bronze:M.white,4);
+  b.line([a[0],topA,a[1]],[c[0],topC,c[1]],.28,M.white,6);
+ }
+ planSlab(b,outline,base,.35,M.concrete);planSlab(b,outline,base+height,.35,M.concrete);
+ // Recessed crown terrace leaves the shaped glass parapet visible against sky.
+ b.box(width*.45,2.5,depth*.42,x,base+height+1.25,z-2,M.dark);
+ for(const y of[base+height*.34,base+height*.62]){
+  b.box(width*.7,1.2,3.0,x,y,z-depth*.36-1,M.white);
+  planter(b,x,y+.6,z-depth*.36-1,width*.58,1.7);
+ }
 }
 function theRiver(b) {
-  b.box(138, 7, 69, 0, 3.5, 0, M.plaster);
-  b.box(136, 5, 66, 0, 9.5, 0, windowsMaterial('river-podium', 36, 2, true));
-  b.box(139, .8, 70, 0, 12.4, 0, M.white);
-  curvedCondo(b, -34, -10, 43, 32, 221, 71, 'river-tower-south', 1.2);
-  curvedCondo(b, 37, -15, 39, 29, 152, 47, 'river-tower-north', .7);
-  b.box(29, 3.5, .4, 0, 7.8, 34.7, M.dark);
-  b.sign('THE RIVER', 27, 3, 0, 7.8, 35, '#e6dbc5', '#28251f');
-  for (let x = -63; x <= 63; x += 9) { b.box(.6, 5, .6, x, 3, 35.2, M.gold); b.box(5.7, .15, .3, x, 6, 35.3, M.softLight); }
+ b.box(138,7,69,0,3.5,0,M.plaster);
+ b.box(136,5,66,0,9.5,0,windowsMaterial('river-podium',23,2,true));
+ b.box(139,.8,70,0,12.4,0,M.white);
+ riverTower(b,-31,-8,60,33,228,71,'river-tower-south',1);
+ riverTower(b,34,-13,53,30,139,44,'river-tower-north',-1);
+ // Landscaped shared podium, infinity pool and shaded riverfront colonnade.
+ b.box(52,.16,9,0,12.92,25,M.pool);b.box(53,.32,.45,0,13,29.6,M.white);
+ for(const x of[-62,-45,-12,15,48,63]){palm(b,x,12.8,17,6);planter(b,x,12.8,21,9,2);}
+ for(let x=-63;x<=63;x+=9){b.box(.65,5,.65,x,3,35.1,M.plaster);b.box(5.7,.15,.3,x,6,35.3,M.softLight);}
+ for(let x=-59;x<64;x+=13){b.box(10.5,4.8,.15,x,3.5,34.58,windowsMaterial('river-lobby',3,1,true));b.box(10.7,.25,3.8,x,6.2,35,M.bronze);}
+ b.sign('THE RIVER',24,2.3,0,7.8,35,'#e6dbc5','#28251f');
 }
+
 function stateTower(b) {
   rectangularTower(b, 0, -7, 74, 49, 171, 48, 'state-main');
   rectangularTower(b, 0, -9, 61, 43, 198, 56, 'state-upper');
@@ -478,6 +548,16 @@ function mandarinOriental(b) {
     arch(b, 4.2, 3.7, x, y, 27.08, M.window);
     b.cylinder(.22, .22, 4, x - 2.6, y + 1.8, 27.4, M.white, 8);
   }
+  for(const y of[1,5.7]){
+   b.box(67,.4,4,-14,y,28.2,M.white);
+   for(let x=-44;x<18;x+=3){b.box(.13,1,.13,x,y+.65,29.8,M.white);b.box(3,.12,.15,x+1.5,y+1.15,29.8,M.white);}
+   for(let x=-40;x<20;x+=12){b.box(7,.15,3,x,y+3.8,28.5,M.plaster);planter(b,x,y,29.1,2,1);}
+  }
+  // Hipped roofs, a central pediment and the garden-facing shaded arcade.
+  for(const side of[-1,1])b.box(35,.45,25,-14+side*15,11.8,15,M.roof,[0,0,-side*.09]);
+  b.box(12,2,3,-14,11,27.8,M.white);b.cylinder(0,4.2,2.5,-14,13.05,26.8,M.white,4,[1.4,1,.4]);
+  for(const x of[-47,-28,4,24])palm(b,x,1,32.5,8);
+  b.box(39,.18,4,-12,.6,36.2,M.pool);
   b.box(65, .4, 1, -14, 5.6, 27.5, M.white);
   b.sign('MANDARIN ORIENTAL', 40, 2.4, -14, 11.6, 27.2, '#f0dab0', '#514f40');
   for (let x = -39; x < 20; x += 10) {
@@ -505,8 +585,8 @@ const builders = {
 export const landmarkDimensions = Object.freeze({
   'wat-arun': { width: 102, depth: 89, height: 76 },
   'wat-pho': { width: 148, depth: 112, height: 42 },
-  'icon-siam': { width: 230, depth: 96, height: 39 },
-  'the-river': { width: 140, depth: 70, height: 229 },
+  'icon-siam': { width: 235, depth: 98, height: 42 },
+  'the-river': { width: 140, depth: 71, height: 250 },
   'state-tower': { width: 77, depth: 53, height: 249 },
   'santa-cruz': { width: 35, depth: 56, height: 37 },
   'holy-rosary': { width: 29, depth: 49, height: 46 },
