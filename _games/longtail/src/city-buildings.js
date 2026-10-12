@@ -7,7 +7,11 @@ export function addCityBuilding(batch,{x,z,width,depth,height,heading,variant,ma
  const profile=FACADE_PROFILES[material.userData.facade.style],floorHeight=profile.floorHeight;
  const co=Math.cos(heading),si=Math.sin(heading),base=3;
  const box=(m,lx,y,lz,w,h,d)=>batch.box(m,x+lx*co+lz*si,base+y,z-lx*si+lz*co,w,h,d,heading);
- box(wall,0,height/2,0,width-.12,height,depth-.12);
+ // The four opaque facades are the walls. A nearly coincident backing box
+ // loses depth precision at river distances and flickers through the windows.
+ // Keep only the underside here; the existing roof closes the top.
+ const underside=new THREE.PlaneGeometry(width,depth).rotateX(Math.PI/2);
+ batch.add(underside,wall,x,base,z,1,1,1,heading);underside.dispose();
  const faces=[[0,depth/2,width,0],[0,-depth/2,width,Math.PI],[width/2,0,depth,Math.PI/2],[-width/2,0,depth,-Math.PI/2]];
  for(const [lx,lz,length,angle]of faces){
   const geometry=new THREE.PlaneGeometry(length,height),uv=geometry.attributes.uv;
@@ -29,7 +33,8 @@ export function addCityBuilding(batch,{x,z,width,depth,height,heading,variant,ma
    }else if(floor%2===0||height<26)box(trim,0,y,0,width+.25,.20,depth+.25);
   }
   for(const sign of[-1,1]){
-   box(wall,sign*width*.49,height/2,0,.42,height,depth+.38);
+   // Corner columns must not form another full side wall behind the facade.
+   for(const end of[-1,1])box(wall,sign*(width/2-.16),height/2,end*(depth/2-.16),.64,height,.64);
    if(residential)box(wall,sign*width*.23,height/2,depth/2+.45,.23,height,1.1);
   }
   // A recessed entry, small canopy, rooftop service room and parapets.

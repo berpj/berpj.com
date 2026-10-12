@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import {patrolFlash} from '../src/patrols.mjs';
 import {facadeMaterial} from '../src/facade-materials.js';
+import {addCityBuilding} from '../src/city-buildings.js';
 import {renderNightFrame} from '../src/render-frame.js';
 import {FullScreenQuad} from 'three/addons/postprocessing/Pass.js';
 import {RenderPass} from 'three/addons/postprocessing/RenderPass.js';
@@ -32,6 +33,38 @@ check('condo textures keep unoccupied glass dark while preserving facade detail'
  s.add(new THREE.AmbientLight(0xffffff,.3));const wall=new THREE.Mesh(new THREE.PlaneGeometry(2,2),m);s.add(wall);
  renderer.setRenderTarget(target);renderer.clear();renderer.render(s,c);assert(invalidPixels(target)===0,'nonfinite facade rendering');wall.geometry.dispose();
  return `${(ratio*100).toFixed(1)}% emitting area; dark glazing has a separate diffuse map`;
+});
+
+check('city facades stay unobstructed while orbiting at river and skyline distances',()=>{
+ const s=new THREE.Scene(),c=new THREE.PerspectiveCamera(62,1,.3,8000);
+ const facade=new THREE.MeshBasicMaterial({color:0xffffff}),solid=new THREE.MeshBasicMaterial({color:0xff0000});
+ facade.userData.facade={style:'city',columns:6,rows:8};
+ const transform=new THREE.Object3D(),unit=new THREE.BoxGeometry(),backing=[];
+ const batch={add(g,m,x,y,z,sx=1,sy=1,sz=1,ry=0){
+  transform.position.set(x,y,z);transform.rotation.set(0,ry,0);transform.scale.set(sx,sy,sz);transform.updateMatrix();
+  // World geometry is baked into float32 positions by the real city batch.
+  const mesh=new THREE.Mesh(g.clone().applyMatrix4(transform.matrix),m);s.add(mesh);if(m!==facade)backing.push(mesh);
+ },box(m,x,y,z,w,h,d,ry){this.add(unit,m,x,y,z,w,h,d,ry);}};
+ addCityBuilding(batch,{x:1460,z:-1730,width:38,depth:32,height:72,heading:.37,variant:1,material:facade,wall:solid,trim:solid,roof:solid,glass:solid,detail:false});
+ const actual=new Uint16Array(size*size*4),expected=new Uint16Array(size*size*4);let lost=0,covered=0,views=0;
+ for(const aspect of[1,390/844])for(const distance of[200,500,900,1500,2400])for(let step=0;step<16;step++){
+  const angle=.37+step*Math.PI/8+.021;c.aspect=aspect;c.updateProjectionMatrix();c.position.set(1460+Math.sin(angle)*distance,9,-1730+Math.cos(angle)*distance);c.lookAt(1460,39,-1730);
+  for(const mesh of backing)mesh.visible=false;
+  renderer.setRenderTarget(target);renderer.clear();renderer.render(s,c);renderer.readRenderTargetPixels(target,0,0,size,size,expected);
+  for(const mesh of backing)mesh.visible=true;
+  renderer.clear();renderer.render(s,c);renderer.readRenderTargetPixels(target,0,0,size,size,actual);
+  for(let y=1;y<size-1;y++)for(let x=1;x<size-1;x++){
+   const i=(y*size+x)*4;
+   // Only compare interior wall pixels, excluding legitimate roof silhouettes.
+   if([i,i-4,i+4,i-size*4,i+size*4].every(j=>THREE.DataUtils.fromHalfFloat(expected[j+1])>.9)){
+    covered++;if(THREE.DataUtils.fromHalfFloat(actual[i+1])<.9)lost++;
+   }
+  }views++;
+ }
+ s.traverse(o=>o.geometry?.dispose());unit.dispose();facade.dispose();solid.dispose();
+ assert(covered>10000,`insufficient wall coverage: ${covered}`);
+ assert(lost===0,`${lost}/${covered} facade pixels replaced by backing walls in ${views} views`);
+ return `${views} desktop/mobile views, ${covered} interior pixels, no wall bleeding`;
 });
 
 check('wake edges stay finite after interpolation roundoff',()=>{

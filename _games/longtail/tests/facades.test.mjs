@@ -38,3 +38,32 @@ test('city blocks have four outward walls with metre-scaled windows, bounded det
   neutral.dispose();
  }
 });
+
+test('facade shells remain opaque from all sides, above and below without a competing backing wall',()=>{
+ const material=facadeMaterial('enclosure-test',{style:'city',rows:8,columns:6}),neutral=new THREE.MeshStandardMaterial();
+ const x=1460,z=-1730,depth=32,height=72,base=3,unit=new THREE.BoxGeometry();
+ for(const width of[18,21,38])for(const heading of[0,.37,1.9,Math.PI])for(const detail of[true,false]){
+  const group=new THREE.Group(),transform=new THREE.Object3D();
+  const batch={add(g,m,px,py,pz,sx=1,sy=1,sz=1,ry=0){
+   transform.position.set(px,py,pz);transform.rotation.set(0,ry,0);transform.scale.set(sx,sy,sz);transform.updateMatrix();
+   group.add(new THREE.Mesh(g.clone().applyMatrix4(transform.matrix),m));
+  },box(m,px,py,pz,w,h,d,ry){this.add(unit,m,px,py,pz,w,h,d,ry);}};
+  addCityBuilding(batch,{x,z,width,depth,height,heading,variant:1,material,wall:neutral,trim:neutral,roof:neutral,glass:neutral,detail});
+  group.updateMatrixWorld(true);
+  const ry=new THREE.Matrix4().makeRotationY(heading),center=new THREE.Vector3(x,base+height*.53,z);
+  for(const normal of[new THREE.Vector3(0,0,1),new THREE.Vector3(0,0,-1),new THREE.Vector3(1,0,0),new THREE.Vector3(-1,0,0)]){
+   const direction=normal.applyMatrix4(ry),origin=center.clone().addScaledVector(direction,2500);
+   const hits=new THREE.Raycaster(origin,direction.clone().negate()).intersectObject(group);
+   assert(hits.length>0,'open side exposes the background');
+   assert.equal(hits[0].object.material,material,'solid wall covers the windows');
+   // Ignore duplicate triangle hits at an edge; no second surface may sit just behind a wall.
+   assert(hits.filter(h=>h.object!==hits[0].object).every(h=>h.distance-hits[0].distance>.5),'near-coplanar backing surface remains');
+  }
+  for(const sign of[-1,1]){
+   const origin=new THREE.Vector3(-width*.35,height/2+sign*2500,-depth*.35).applyMatrix4(ry).add(new THREE.Vector3(x,base,z));
+   assert(new THREE.Raycaster(origin,new THREE.Vector3(0,-sign,0)).intersectObject(group).length>0,'building cap is open');
+  }
+  group.traverse(o=>o.geometry?.dispose());
+ }
+ unit.dispose();neutral.dispose();
+});

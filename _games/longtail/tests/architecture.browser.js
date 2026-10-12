@@ -33,6 +33,10 @@ for(const [id,label]of[['memorial','Memorial Bridge'],['pokklao','Sky Park & Pok
 for(const [id,label]of[['icon','ICONSIAM pier'],['arun','Wat Arun pier'],['sathorn','Sathorn pier']])addButton(label,()=>{
  const p=piers.find(p=>p.id===id),n=river.sample(p.distance+18,p.side*(river.sample(p.distance).width/2-47));camera.position.set(n.x,6,n.z);camera.lookAt(p.x+p.nx*19,4.5,p.z+p.nz*19);status.textContent=label+' · connected gangway and clear berth';draw();
 });
+for(const side of[-1,1])addButton(side===1?'West-bank facades':'East-bank facades',()=>{
+ const distance=river.length*.58,p=river.sample(distance,side*(river.sample(distance).width/2-65)),target=river.sample(distance+18,side*(p.width/2+32));
+ camera.position.set(p.x,8,p.z);camera.lookAt(target.x,17,target.z);status.textContent='Opaque facades and corner columns from the river';draw();
+});
 addButton('Harbour overview',()=>{const l=world.landmarks.find(l=>l.kind==='icon-siam'),p=river.sample(l.distance+420,-river.sample(l.distance).width*.3);camera.position.set(p.x,24,p.z);camera.lookAt(l.x,61,l.z);status.textContent='ICONSIAM and the riverside skyline';draw();});
 addButton('Resolution stress check',async()=>{
  let black=0;const pixels=new Uint8Array(32*32*4),gl=renderer.getContext();
