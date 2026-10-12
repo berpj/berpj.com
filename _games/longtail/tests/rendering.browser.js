@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import {facadeMaterial} from '../src/facade-materials.js';
 import {renderNightFrame} from '../src/render-frame.js';
 import {FullScreenQuad} from 'three/addons/postprocessing/Pass.js';
 import {RenderPass} from 'three/addons/postprocessing/RenderPass.js';
@@ -19,6 +20,18 @@ function check(name,fn){const li=document.createElement('li');try{const detail=f
 function invalidPixels(rt){const pixels=new Uint16Array(rt.width*rt.height*4);renderer.readRenderTargetPixels(rt,0,0,rt.width,rt.height,pixels);let invalid=0;for(let i=0;i<pixels.length;i+=4){if([0,1,2].some(c=>(pixels[i+c]&0x7c00)===0x7c00))invalid++;}return invalid;}
 function draw(material){const quad=new FullScreenQuad(material);renderer.setRenderTarget(target);renderer.clear();quad.render(renderer);quad.dispose();return invalidPixels(target);}
 function assert(value,message){if(!value)throw Error(message);}
+
+check('condo textures keep unoccupied glass dark while preserving facade detail',()=>{
+ const m=facadeMaterial('gpu-condo',{style:'condo',rows:60,columns:12,height:2048}),diffuse=m.map.image,emission=m.emissiveMap.image;
+ const pixels=emission.getContext('2d').getImageData(0,0,emission.width,emission.height).data;let lit=0;
+ for(let i=0;i<pixels.length;i+=4)if(pixels[i]+pixels[i+1]+pixels[i+2]>0)lit++;
+ const ratio=lit/(emission.width*emission.height);assert(ratio>.025&&ratio<.13,`unexpected lit facade area ${ratio}`);
+ assert(diffuse!==emission,'unlit glass must not share the emission texture');
+ const s=new THREE.Scene(),c=new THREE.OrthographicCamera(-1,1,1,-1,.1,10);c.position.z=2;
+ s.add(new THREE.AmbientLight(0xffffff,.3));const wall=new THREE.Mesh(new THREE.PlaneGeometry(2,2),m);s.add(wall);
+ renderer.setRenderTarget(target);renderer.clear();renderer.render(s,c);assert(invalidPixels(target)===0,'nonfinite facade rendering');wall.geometry.dispose();
+ return `${(ratio*100).toFixed(1)}% emitting area; dark glazing has a separate diffuse map`;
+});
 
 check('wake edges stay finite after interpolation roundoff',()=>{
   const wakes=new SurfaceWakes(new THREE.Scene(),1),geometry=new THREE.PlaneGeometry(2,2);

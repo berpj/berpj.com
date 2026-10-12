@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import {facadeMaterial,facadeHash as hash} from './facade-materials.js';
 import {addMappedArchitecture,mappedBuildingById} from './mapped-architecture.js';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 
@@ -31,7 +32,6 @@ const M = {
   stained: c('stained', '#ccb076', { emissive: '#d18b47', emissiveIntensity: .8 }),
 };
 
-function hash(n) { const h = Math.sin(n * 127.1 + 311.7) * 43758.5453; return h - Math.floor(h); }
 function canvasTexture(w, h, paint) {
   if (typeof document === 'undefined') return null;
   const canvas = document.createElement('canvas'); canvas.width = w; canvas.height = h;
@@ -41,20 +41,8 @@ function canvasTexture(w, h, paint) {
   return texture;
 }
 function windowsMaterial(key, columns = 24, rows = 60, warm = false) {
-  if (materials.has(key)) return materials.get(key);
-  const map = canvasTexture(768, 1536, (ctx, w, h) => {
-    ctx.fillStyle = warm ? '#202421' : '#15232a'; ctx.fillRect(0, 0, w, h);
-    const cw = w / columns, rh = h / rows;
-    for (let row = 0; row < rows; row++) for (let col = 0; col < columns; col++) {
-      const n = hash(row * 91 + col * 53 + key.length * 37);
-      ctx.fillStyle = n > .70 ? ['#c29b60', '#aa8b54', '#c6b588', '#736044'][Math.floor(hash(row * 13 + col) * 4)] : n > .38 ? '#1b262c' : '#0d151c';
-      ctx.fillRect(col * cw + 2, row * rh + 2, cw - 4, rh - 4);
-      if (n > .77) { ctx.fillStyle = '#414238'; ctx.fillRect(col * cw + cw * .6, row * rh + 2, cw * .23, rh - 4); }
-      ctx.fillStyle = '#283236'; ctx.fillRect(col * cw, row * rh, 1.3, rh);
-    }
-  });
-  const material = c(key, '#aab6b6', { map, emissiveMap: map, emissive: '#eee6ca', emissiveIntensity: .65, metalness: .3, roughness: .42 });
-  return material;
+ const style=key.startsWith('river-tower')?'condo':key.includes('hotel')||key.includes('wing')?'hotel':warm?'commercial':'city';
+ return facadeMaterial(key,{columns,rows,style,stone:warm?'#596364':'#64737b',glass:warm?'#293334':'#203540',width:768,height:1536});
 }
 function signMaterial(label, color = '#fff1c0', background = '#29261e') {
   const key = `sign:${label}:${color}`;
@@ -316,7 +304,7 @@ function watPho(b) {
 }
 
 function rectangularTower(b, x, z, width, depth, height, floors, key, setback = false) {
-  const glass = windowsMaterial(key, Math.max(12, Math.floor(width / 2)), floors);
+  const glass = windowsMaterial(key, Math.max(5, Math.round(width / 4.8)), floors);
   b.box(width, height, depth, x, height / 2, z, glass);
   for (const side of [-1, 1]) for (const end of [-1, 1]) b.box(1.1, height + 1, 1.1, x + side * width / 2, (height + 1) / 2, z + end * depth / 2, M.white);
   for (let floor = 0; floor <= floors; floor++) {
@@ -330,7 +318,7 @@ function rectangularTower(b, x, z, width, depth, height, floors, key, setback = 
   }
 }
 function facetedTower(b, x, z, width, depth, height, floors, key) {
-  const glass = windowsMaterial(key, 44, floors);
+  const glass = windowsMaterial(key, Math.max(18,Math.round(Math.PI*(width+depth)/2/5.4)), floors);
   b.cylinder(1, 1, height, x, height / 2, z, glass, 8, [width / 2, 1, depth / 2]);
   for (let floor = 0; floor <= floors; floor++) b.cylinder(1.015, 1.015, .4, x, Math.max(.2, floor * height / floors), z, M.concrete, 8, [width / 2, 1, depth / 2]);
   for (let corner = 0; corner < 8; corner++) {
@@ -368,12 +356,13 @@ function iconSiam(b) {
   stairs(b, 0, 47, 200, 3, 9, 8, 1);
 }
 function curvedCondo(b, x, z, width, depth, height, floors, key, lean = 0) {
-  const glass = windowsMaterial(key, 56, floors);
+  const glass = windowsMaterial(key, Math.max(18,Math.round(Math.PI*(width+depth)/2/5.4)), floors);
   b.cylinder(1, 1, height, x, height / 2, z, glass, 28, [width / 2, 1, depth / 2]);
   for (let floor = 0; floor <= floors; floor++) {
     const y = Math.max(.23, floor * height / floors);
     const bulge = Math.sin(floor / floors * Math.PI) * 1.3;
-    b.cylinder(1, 1, .45, x + Math.sin(floor / floors * Math.PI) * lean, y, z, M.white, 28, [width / 2 + 1.2 + bulge, 1, depth / 2 + 1]);
+    b.cylinder(1, 1, .28, x + Math.sin(floor / floors * Math.PI) * lean, y, z, M.concrete, 28, [width / 2 + 1.2 + bulge, 1, depth / 2 + 1]);
+    if(floor<floors)b.add(new THREE.CylinderGeometry(1,1,.82,28,1,true),M.glass,x+Math.sin(floor/floors*Math.PI)*lean,y+.63,z,[0,0,0],[width/2+1.1+bulge,1,depth/2+.95]);
   }
   for (const side of [-1, 1]) b.box(1.35, height + 2, 1.8, x + side * width * .43, (height + 2) / 2, z + depth * .22, M.white);
   b.cylinder(.85, 1, 7, x, height + 3.5, z, M.white, 28, [width / 2, 1, depth / 2]);

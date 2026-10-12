@@ -25,7 +25,7 @@ No backend, API key, subscription or runtime map service. The installed dependen
 - Touch: horizontal steering pad, throttle, brake/reverse, boost and slide buttons. Holding touch Boost or Slide also applies throttle, so two thumbs are sufficient.
 - Gamepad: left stick, RT throttle, LT brake, A boost, B slide, Y horn, X recover, Start pause.
 
-Scores use `bangkok-longtail:scores:v1` in localStorage, separate from Tuk Tuk. Night Shifts ending at the timer or in a boat collision save top-five scores from completed fares; Free Cruise and quitting early are unranked. Storage failures do not prevent play. Visibility loss pauses the shift and its audio.
+Scores use `bangkok-longtail:scores:v1` in localStorage. Night Shifts ending at the timer or in a boat collision save top-five scores from completed fares; Free Cruise and quitting early are unranked. Storage failures do not prevent play. Visibility loss pauses the shift and its audio.
 
 ## Implementation
 
@@ -37,7 +37,9 @@ Scores use `bangkok-longtail:scores:v1` in localStorage, separate from Tuk Tuk. 
 - `src/fountains.js`: animated illuminated water jets at ICONSIAM.
 - `src/drone-show.js`: a looping ICONSIAM light show with Thai flag, lotus, elephant, Wat Arun and long-tail boat formations. The 480 desktop / 300 mobile LEDs morph between shapes on the GPU in one draw per scene/reflection, with no extra point lights. Each shape holds for 11 seconds and transitions for 12 seconds.
 - `src/landmarks.js`: merged architectural landmark meshes.
-- `src/mapped-architecture.js`: six riverside hotels/condos with original OSM footprints, mapped condo heights and authored facade/crown details.
+- `src/mapped-architecture.js`: six riverside hotels/condos with original OSM footprints, mapped condo heights, broad glazing, recessed balconies and facade/crown details.
+- `src/facade-materials.js`: deterministic room layouts, curtains, separate unlit glass and interior emission masks. Condo lighting targets approximately 14% of apartments after empty-floor variation; hotels and neighbourhood buildings remain sparse but somewhat busier. These are visual art choices, not measured occupancy data.
+- `src/city-buildings.js`: metre-scaled apartment windows, balcony slabs and dark railings, entry canopies, parapets and rooftop service rooms, merged into the existing city material batches.
 - `src/signs.js`: Thai-first bridge and pier enamel plates using bundled Noto Sans Thai.
 - `src/render-frame.js`: applies adaptive resolution and viewport changes before drawing, preventing cleared black canvas frames.
 - `src/boats.js`: curved wooden long-tail and four distinct river traffic classes.
@@ -62,7 +64,7 @@ The main HDR scene uses up to 2× MSAA when supported, including at reduced pixe
 
 For local rendering measurements, open `/longtail/?stats` on the Vite dev server. The visible readout includes every reflection and postprocessing draw. It is removed from production builds.
 
-For GPU regression checks, open `/longtail/tests/rendering.html` on the dev server. Its fifteen checks execute the actual shaders, exercise wake UV roundoff and water reflectance boundaries, reproduce NaN propagation in an unprotected bloom pass, and verify that the protected pass contains it without changing normal lighting. They verify the moon at launch and after turning, boost zoom and viewport changes and the drone shaders across thirty formation/distance views, including solid building occlusion. They also compare fine-detail contrast and edge smoothing in the mobile antialiasing pass, and check distant lights at 250-2000 m, stable strip brightness during subpixel camera movement, solid occlusion and camera clipping. A black-frame regression reproduces the previous after-draw resize bug, then verifies 60 resolution/viewport changes. `/longtail/tests/architecture.html` provides landmark/sign views, each drone formation and a live show preview, plus a 90-frame full-scene resolution stress check. These development fixtures are not included in the production build.
+For GPU regression checks, open `/longtail/tests/rendering.html` on the dev server. Its sixteen checks execute the actual shaders, exercise wake UV roundoff and water reflectance boundaries, reproduce NaN propagation in an unprotected bloom pass, and verify that the protected pass contains it without changing normal lighting. They verify sparse condo emission separately from unlit glazing, the moon at launch and after turning, boost zoom and viewport changes and the drone shaders across thirty formation/distance views, including solid building occlusion. They also compare fine-detail contrast and edge smoothing in the mobile antialiasing pass, and check distant lights at 250-2000 m, stable strip brightness during subpixel camera movement, solid occlusion and camera clipping. A black-frame regression reproduces the previous after-draw resize bug, then verifies 60 resolution/viewport changes. `/longtail/tests/architecture.html` provides landmark/sign views, each drone formation and a live show preview, plus a 90-frame full-scene resolution stress check. These development fixtures are not included in the production build.
 
 ## Geographic and asset scope
 
@@ -70,7 +72,7 @@ River centreline and widths are derived from OpenStreetMap, with source queries/
 
 The intended bridge is Taksin/Sathorn, which connects to Krung Thon Buri Road beside The River; it is not Krung Thon Bridge farther north.
 
-The music is “Exit the Premises” by Kevin MacLeod, CC BY 4.0. Full credit, source links and transcode details are visible in `public/credits.html` and `public/audio/provenance.json`. Barlow and Noto Sans Thai fonts are SIL OFL. Riverside shop texture is reused generated art from the existing game, with provenance bundled. All boats, other building surfaces and sound effects are original procedural work.
+The music is “Exit the Premises” by Kevin MacLeod, CC BY 4.0. Full credit, source links and transcode details are visible in `public/credits.html` and `public/audio/provenance.json`. Barlow and Noto Sans Thai fonts are SIL OFL. Riverside shop texture is the retained original generated shophouse artwork, with provenance bundled. All boats, other building surfaces and sound effects are original procedural work.
 
 ## Collision feedback checks
 

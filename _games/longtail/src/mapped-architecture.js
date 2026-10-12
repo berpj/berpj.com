@@ -1,35 +1,13 @@
 import * as THREE from 'three';
+import {facadeMaterial,FACADE_PROFILES} from './facade-materials.js';
 import data from '../public/data/riverside-buildings.json' with {type:'json'};
 
 export const mappedBuildings=data.buildings;
 export const mappedBuildingById=new Map(mappedBuildings.map(b=>[b.id,b]));
-const facades=new Map();
-const hash=n=>{const v=Math.sin(n*127.1+311.7)*43758.5453;return v-Math.floor(v);};
-
 function facade(record){
- if(facades.has(record.id))return facades.get(record.id);
  const colors={hilton:['#c3c7bf','#48616c'],sheraton:['#d0b293','#43515a'],peninsula:['#c5b7a0','#344a58'],shangri:['#baa68e','#344c59'],magnolias:['#a0b3ba','#344c60'],residences:['#bbb7a7','#344952']};
- const [stone,glass]=colors[record.style];let map=null,emissiveMap=null;
- if(typeof document!=='undefined'){
-  const diffuse=document.createElement('canvas'),emission=document.createElement('canvas');
-  diffuse.width=emission.width=512;diffuse.height=emission.height=2048;
-  const c=diffuse.getContext('2d'),e=emission.getContext('2d'),cols=16,rows=record.floors,cw=512/cols,rh=2048/rows;
-  c.fillStyle=stone;c.fillRect(0,0,512,2048);e.fillStyle='#000';e.fillRect(0,0,512,2048);
-  for(let row=0;row<rows;row++)for(let col=0;col<cols;col++){
-   const seed=row*83+col*29+record.osmId%157,n=hash(seed),x=col*cw+3,y=row*rh+rh*.10,w=cw-6,h=rh*.70;
-   c.fillStyle=glass;c.fillRect(x,y,w,h);c.fillStyle='#25343c';c.fillRect(x+2,y+2,w-4,h-4);
-   if(n>.38){e.fillStyle=['#f2d2a2','#c6ad8f','#8dabb8','#d39a62'][Math.floor(hash(seed+17)*4)];e.globalAlpha=.35+hash(seed+91)*.5;e.fillRect(x+2,y+2,w-4,h-4);e.globalAlpha=1;
-    e.fillStyle='#1b1610';e.fillRect(x+w*(.35+hash(seed+2)*.2),y+2,2,h-4);e.fillRect(x,y+h*.78,w,h*.22);
-    if(n>.82){e.fillStyle='#38342b';e.fillRect(x+2,y+2,w*.35,h-4);}
-   }
-   c.fillStyle=stone;c.fillRect(x+w*.49,y,1,h);c.fillStyle='#707778';c.fillRect(col*cw,row*rh+rh*.86,cw,Math.max(1,rh*.035));
-   c.fillStyle='#334148';c.fillRect(x,y+h+2,w,rh*.12);
-  }
-  map=new THREE.CanvasTexture(diffuse);emissiveMap=new THREE.CanvasTexture(emission);
-  for(const t of[map,emissiveMap]){t.colorSpace=THREE.SRGBColorSpace;t.wrapS=THREE.RepeatWrapping;t.anisotropy=4;}
- }
- const material=new THREE.MeshStandardMaterial({color:0xc4c9cd,map,emissiveMap,emissive:0xffedcd,emissiveIntensity:1.05,roughness:.54,metalness:.14});
- facades.set(record.id,material);return material;
+ const [stone,glass]=colors[record.style],style=['magnolias','residences'].includes(record.style)?'condo':'hotel';
+ return facadeMaterial(record.id,{columns:12,rows:record.floors,style,stone,glass,height:2048});
 }
 
 // These outlines are the mapped buildings in geographic orientation, in metres.
@@ -48,7 +26,7 @@ export function addMappedArchitecture(b,record,M){
   const a=points[i],z=points[(i+1)%points.length],dx=z[0]-a[0],dz=z[1]-a[1],length=Math.hypot(dx,dz);if(length<.1)continue;
   const x=(a[0]+z[0])/2,zz=(a[1]+z[1])/2,angle=Math.atan2(-dz,dx),nx=Math.sin(angle),nz=Math.cos(angle);
   const geo=new THREE.PlaneGeometry(length,height),uv=geo.attributes.uv;
-  for(let j=0;j<uv.count;j++)uv.setX(j,uv.getX(j)*length/(16*3.25)+(i%4)/4);
+  for(let j=0;j<uv.count;j++)uv.setX(j,uv.getX(j)*length/(12*FACADE_PROFILES[wall.userData.facade.style].bayWidth)+(i%4)/12);
   b.add(geo,wall,x,base+height/2,zz,[0,angle,0]);
   // Recessed glazing, exposed balcony edges and corner fins, all merged.
   for(let floor=0;floor<=record.floors;floor++){
@@ -78,6 +56,18 @@ export function addMappedArchitecture(b,record,M){
   b.box((maxX-minX)*.55+1,.5,(maxZ-minZ)*.45+1,cx,base+height+4.1,cz,M.plaster);
  }
  edges.sort((a,z)=>z.length-a.length);const front=edges[0];
+ if(wall.userData.facade.style==='condo')for(const edge of edges.slice(0,2)){
+  const {x,zz,angle,nx,nz,length}=edge;
+  for(let floor=1;floor<record.floors;floor++){
+   const y=base+floor*floorHeight;
+   b.box(length,.22,1.18,x+nx*.38,y,zz+nz*.38,M.concrete,[0,angle,0]);
+   b.box(length-.25,.85,.10,x+nx*.92,y+.63,zz+nz*.92,M.glass,[0,angle,0]);
+  }
+  // Deep full-height privacy fins between pairs of large apartment bays.
+  const bays=Math.max(1,Math.round(length/10.8));
+  for(let j=1;j<bays;j++){const u=(j/bays-.5)*length;b.box(.20,height,1.18,x+Math.cos(angle)*u+nx*.42,base+height/2,zz-Math.sin(angle)*u+nz*.42,M.concrete,[0,angle,0]);}
+ }
+
  if(front){
   const names={hilton:'Hilton',sheraton:'ROYAL ORCHID SHERATON',peninsula:'THE PENINSULA',shangri:'Shangri-La',magnolias:'MAGNOLIAS',residences:'MANDARIN ORIENTAL'};
   const width=Math.min(front.length*.8,record.style==='sheraton'?29:23),labelHeight=record.style==='hilton'?3.7:2.3;

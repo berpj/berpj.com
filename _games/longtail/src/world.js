@@ -5,6 +5,8 @@ import {VisibleLights,collectLightFixture,transformLightFixtures,bridgeLightFixt
 import {createRiverfront} from './riverfront.js';
 import {createFountains} from './fountains.js';
 import {createDroneShow} from './drone-show.js';
+import {facadeMaterial,FACADE_PROFILES} from './facade-materials.js';
+import {addCityBuilding} from './city-buildings.js';
 import {mergeGeometries} from 'three/addons/utils/BufferGeometryUtils.js';
 import {buildLandmark} from './landmarks.js';
 import {mappedBuildings,mappedBuildingById} from './mapped-architecture.js';
@@ -23,23 +25,6 @@ const unitBox=new THREE.BoxGeometry(1,1,1);
 export function sign(text,w=20,h=4,bg='#13283c',fg='#ffde9b'){
  const canvas=document.createElement('canvas');canvas.width=1024;canvas.height=256;const c=canvas.getContext('2d');c.fillStyle=bg;c.fillRect(0,0,1024,256);c.fillStyle=fg;c.font='bold 110px Arial';c.textAlign='center';c.textBaseline='middle';c.fillText(text,512,128,970);const texture=new THREE.CanvasTexture(canvas);texture.colorSpace=THREE.SRGBColorSpace;
  return new THREE.Mesh(new THREE.PlaneGeometry(w,h),new THREE.MeshBasicMaterial({map:texture,side:THREE.DoubleSide,toneMapped:false}));
-}
-function cityMaterial(index, floors=12){
- const canvas=document.createElement('canvas'),emission=document.createElement('canvas');canvas.width=emission.width=384;canvas.height=emission.height=768;
- const c=canvas.getContext('2d'),e=emission.getContext('2d');c.fillStyle=['#32353a','#3b3832','#333c3e','#2a3138','#52463a'][index%5];c.fillRect(0,0,384,768);e.fillStyle='#000';e.fillRect(0,0,384,768);
- const rows=floors,cols=index%2?8:6,cw=384/cols,rh=768/rows;
- for(let row=0;row<rows;row++)for(let col=0;col<cols;col++){
-  const x=col*cw+6,y=row*rh+5,lit=random()>.64,w=cw-12,h=rh*.68;
-  c.fillStyle='#0b151b';c.fillRect(x,y,w,h);
-  if(lit){const color=['#d7a764','#e1be89','#a2b7b4','#d6cbaf'][Math.floor(random()*4)];e.fillStyle=color;e.globalAlpha=.25+random()*.65;e.fillRect(x,y,w,h);e.globalAlpha=1;
-   e.fillStyle='#050708';e.fillRect(x+w*(.25+random()*.4),y,w*.17,h);e.fillRect(x,y+h*.82,w,h*.18);
-   if(random()>.55){e.fillStyle='#17150e';e.fillRect(x+4,y+h*.55,w*.35,h*.35);}
-  }
-  c.fillStyle='#52524e';c.fillRect(x-1,y+h,w+3,2);e.fillStyle='#000';e.fillRect(x+w*.5,y,2,h);
-  c.fillStyle='#202927';c.fillRect(col*cw,row*rh,384,2);
- }
- const map=new THREE.CanvasTexture(canvas),light=new THREE.CanvasTexture(emission);map.colorSpace=light.colorSpace=THREE.SRGBColorSpace;map.anisotropy=light.anisotropy=4;
- return new THREE.MeshStandardMaterial({map,emissiveMap:light,emissive:0xfff3dc,emissiveIntensity:1.9,roughness:.64,color:0x87969d});
 }
 export const LANDMARKS=[
  ['wat-arun','Wat Arun',100.488905,13.7436982,1],
@@ -76,7 +61,10 @@ export function createWorld(scene,river,piers,mobile){
   const bounds=new THREE.Box3().setFromObject(model);landmarks.push({kind,name,x:safe.x,z:safe.z,distance:n.distance,bounds,side,reserveLength:geographic?Math.hypot(localBounds.max.x-localBounds.min.x,localBounds.max.z-localBounds.min.z)/2+40:(localBounds.max.x-localBounds.min.x)/2+22,inland:geographic?offset+Math.hypot(localBounds.max.x-localBounds.min.x,localBounds.max.z-localBounds.min.z)/2+70:offset-localBounds.min.z+20});
  }
  // Dense, varied riverside fabric; reserved landmark footprints are kept clear.
- const mats=Array.from({length:5},(_,i)=>[cityMaterial(i,4),cityMaterial(i,10),cityMaterial(i,22)]);const photo=new THREE.TextureLoader().load(`${import.meta.env.BASE_URL}textures/riverside-shophouses.png`);photo.colorSpace=THREE.SRGBColorSpace;photo.anisotropy=4;const shophouse=new THREE.MeshStandardMaterial({map:photo,color:0xa6a8a2,emissiveMap:photo,emissive:0xffd9a0,emissiveIntensity:.035,roughness:.95});const batch=new Batch(lightFixtures),roof=M(0x283239),market=M(0x7b4435),leaf=M(0x233f30),trunk=M(0x44352c);
+ const facadeColors=['#75817f','#8c8172','#717d81','#68757d','#8a8076'];
+ const mats=Array.from({length:5},(_,i)=>['city','condo'].map(style=>facadeMaterial('city-'+i+'-'+style,{columns:6,rows:8,style,stone:facadeColors[i]})));
+ const walls=facadeColors.map(color=>M(color)),trim=M(0x81908f),balconyGlass=new THREE.MeshStandardMaterial({color:0x273e49,roughness:.32,metalness:.32});
+ const photo=new THREE.TextureLoader().load(`${import.meta.env.BASE_URL}textures/riverside-shophouses.png`);photo.colorSpace=THREE.SRGBColorSpace;photo.anisotropy=4;const shophouse=new THREE.MeshStandardMaterial({map:photo,color:0xa6a8a2,emissiveMap:photo,emissive:0xffd9a0,emissiveIntensity:.035,roughness:.95});const batch=new Batch(lightFixtures),roof=M(0x283239),market=M(0x7b4435),leaf=M(0x233f30),trunk=M(0x44352c);
  for(let d=20;d<river.length;d+=35){for(const side of [-1,1]){const riverPoint=river.sample(d);for(let row=0;row<3;row++){
   const width=18+random()*24,depth=20+random()*23,offset=side*(riverPoint.width/2+depth/2+12+row*110),p=river.sample(d+(random()-.5)*14,offset);let height=11+random()*25;
   if(row>0)height+=random()*45;if(d>river.length*.62&&random()>.72)height+=random()*90;const oldTown=d<river.length*.48;if(oldTown)height=6+random()*13+row*4;if(row===0&&oldTown)height=9+random()*4;
@@ -86,9 +74,13 @@ export function createWorld(scene,river,piers,mobile){
   if(!oldTown&&row>0&&landmarks.some(l=>l.side===side&&Math.abs(d-l.distance)<l.reserveLength+65))height=Math.min(height,58);
   if(landmarks.some(l=>l.side===side&&Math.abs(d-l.distance)<l.reserveLength&&Math.abs(offset)<l.inland))continue;
   if(landmarks.some(l=>p.x>l.bounds.min.x-25&&p.x<l.bounds.max.x+25&&p.z>l.bounds.min.z-25&&p.z<l.bounds.max.z+25))continue;
-  const fm=row===0&&height<22&&Math.floor(d/35)%5!==0?shophouse:mats[Math.floor(random()*5)][height<22?0:height<65?1:2];batch.box(fm,p.x,3+height/2,p.z,width,height,depth,p.heading);
-  batch.box(roof,p.x,height+3.5,p.z,width+1,1,depth+1,p.heading);
-  if(row>0){batch.box(roof,p.x,height+5.5,p.z,width*.3,4,depth*.4,p.heading);if(height>65)batch.box(glow,p.x,height+8,p.z,.35,.45,.35);}
+  const photographed=row===0&&height<22&&Math.floor(d/35)%5!==0,variant=Math.floor(random()*5),fm=mats[variant][height>42?1:0];
+  if(photographed){batch.box(shophouse,p.x,3+height/2,p.z,width,height,depth,p.heading);batch.box(roof,p.x,height+3.5,p.z,width+1,1,depth+1,p.heading);}
+  else{
+   const floorHeight=FACADE_PROFILES[fm.userData.facade.style].floorHeight;height=Math.max(2,Math.round(height/floorHeight))*floorHeight;
+   addCityBuilding(batch,{x:p.x,z:p.z,width,depth,height,heading:p.heading,variant,material:fm,wall:walls[variant],trim,roof,glass:balconyGlass,detail:row<2});
+  }
+  if(row>0&&height>65)batch.box(glow,p.x,height+8,p.z,.35,.45,.35);
   if(row===0){const facing=river.sample(d,side*(riverPoint.width/2+depth+17));for(let ac=0;ac<2;ac++)batch.box(stone,facing.x+ac*3,7+ac*3,facing.z,1.5,1.1,.8,p.heading);}
   if(row===0){const f=river.sample(d,side*(riverPoint.width/2+5));batch.box(market,f.x,6.7,f.z,width,.3,4,p.heading);if(Math.floor(d)%3===0)batch.box(glow,f.x,6.9,f.z,width*.3,.08,.24,p.heading);}
  }}

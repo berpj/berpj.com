@@ -20,7 +20,7 @@ const shift={finished:true},status=document.querySelector('#status');
 let showLive=false,showTime=0;
 function addButton(label,fn){const b=document.createElement('button');b.textContent=label;b.onclick=()=>{showLive=false;fn();};document.querySelector('#views').append(b);return b;}
 function landmark(id){showLive=false;const l=world.landmarks.find(l=>l.kind===id),p=river.sample(l.distance+170,-l.side*river.sample(l.distance).width*.28);camera.position.set(p.x,9,p.z);camera.lookAt(l.x,Math.min((l.bounds.max.y)*.4,76),l.z);status.textContent=l.name+' · mapped footprint, authored facade';draw();}
-for(const[id,name]of[['millennium-hilton','Hilton & ICONSIAM'],['peninsula','The Peninsula'],['royal-orchid','Royal Orchid Sheraton'],['shangri-la','Shangri-La'],['magnolias','ICONSIAM residences']])addButton(name,()=>landmark(id));
+for(const[id,name]of[['millennium-hilton','Hilton & ICONSIAM'],['peninsula','The Peninsula'],['royal-orchid','Royal Orchid Sheraton'],['shangri-la','Shangri-La'],['magnolias','ICONSIAM residences'],['the-river','The River condos']])addButton(name,()=>landmark(id));
 function droneView(){const l=world.landmarks.find(l=>l.kind==='icon-siam'),p=river.sample(l.distance+80,-l.side*river.sample(l.distance).width*.42);camera.position.set(p.x,10,p.z);camera.lookAt(world.droneShow.points.position.x,160,world.droneShow.points.position.z);}
 for(const [i,f]of world.droneShow.formations.entries())addButton('Drones: '+f.name,()=>{showLive=false;showTime=i*DRONE_CUE+4;droneView();world.update(showTime,camera,shift);composer.render();status.textContent='ICONSIAM · '+f.name+' · 480 drones in one draw';});
 addButton('Live drone show',()=>{droneView();showTime=0;showLive=true;});
@@ -43,6 +43,11 @@ addButton('Moon: Night Shift',()=>moonLaunch(0));addButton('Moon: Free Cruise',(
 addButton('Moon: turn right',()=>{camera.rotateY(-.20);status.textContent='Moon remains in the sky as the camera turns right';draw();});
 addButton('Moon: turn around',()=>{camera.rotateY(Math.PI);status.textContent='Moon should be behind the camera';draw();});
 addButton('Moon: boost view',()=>{camera.fov=69;camera.updateProjectionMatrix();status.textContent='Boost changes the field of view, not the moon bearing';draw();});
+addButton('Building render budget',()=>{
+ renderer.info.autoReset=false;renderer.info.reset();draw();
+ const {calls,triangles}=renderer.info.render;status.textContent=`Full river scene: ${calls} draws · ${Math.round(triangles/1000)}k triangles · ${renderer.info.memory.textures} textures (includes reflection and postprocessing)`;
+ renderer.info.autoReset=true;
+});
 function draw(){world.update(12,camera,shift);composer.render();}
 window.addEventListener('resize',()=>{camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();world.update(12,camera,shift);renderNightFrame(renderer,composer,{size:{width:innerWidth,height:innerHeight}});});
 landmark('millennium-hilton');
