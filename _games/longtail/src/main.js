@@ -163,9 +163,10 @@ async function init(){try{
  frameMeter=createFrameMeter(renderer);ready=true;$('#start').disabled=false;$('#start').textContent='PLAY';$('#loading-note').textContent='';previousTime=performance.now();requestAnimationFrame(animate);
  if(import.meta.env.DEV&&location.pathname.endsWith('/tests/feedback.html')){
   const {installFeedbackControls}=await import('../tests/feedback-controls.js');
-  installFeedbackControls({audio,crashFeedback,approach(kind,boost=false){
+  installFeedbackControls({audio,crashFeedback,approach(kind,boost=false,{stacked=false}={}){
    setMode(true);start();countdown=.01;const target=traffic.find(t=>t.kind===kind),d=piers[8].distance;
-   Object.assign(target,{distance:d+(boost?310:245),direction:-1,lane:0,speed:9,actualSpeed:9,slow:0});stepTraffic(0);
+   Object.assign(target,{distance:d+(boost?310:245),direction:-1,lane:0,speed:9,actualSpeed:9,slow:0});
+   if(stacked){const second=traffic.find(t=>t.kind==='cruise');Object.assign(second,{distance:target.distance+80,direction:-1,lane:0,speed:9,actualSpeed:9,slow:0});}stepTraffic(0);
    boat.heading=Math.atan2(boat.x-target.x,boat.z-target.z);const speed=boost?53:34;boat.vx=-Math.sin(boat.heading)*speed;boat.vz=-Math.cos(boat.heading)*speed;boat.speed=speed;controls.touch.gas=true;controls.touch.boost=boost;
    previous={x:boat.x,z:boat.z,heading:boat.heading};cameraHeading=boat.heading;
   }});

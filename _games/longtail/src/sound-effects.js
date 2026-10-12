@@ -13,28 +13,21 @@ function envelope(context,time,duration,volume,attack=.025){
  gain.gain.setTargetAtTime(.0001,time+attack,(duration-attack)/5);gain.gain.setValueAtTime(0,time+duration);return gain;
 }
 
-export function duckForWarning(context,ambience){
- const t=context.currentTime;
- ambience.gain.cancelScheduledValues(t);ambience.gain.setTargetAtTime(.22,t,.025);
- ambience.gain.setTargetAtTime(1,t+1.35,.16);
-}
-
 export function playWarningHorn(context,destination,kind,{pan=0,distance=40}={}){
- const profiles={cruise:[104,1.05],tug:[92,1.15],barge:[92,1.15],ferry:[174,.85],electric:[208,.65],longtail:[318,.5],fishing:[380,.43]};
- const [frequency,duration]=profiles[kind]||profiles.ferry,voice=voiceGroup(context,destination,pan),t=context.currentTime;
+ const profiles={cruise:138,tug:122,barge:122,ferry:224,electric:256,longtail:328,fishing:380};
+ const frequency=profiles[kind]||profiles.ferry,voice=voiceGroup(context,destination,pan),t=context.currentTime;
  // A warning is a gameplay cue: remain audible at the longer warning range,
  // including when the sound comes from a tug ahead of its threatened barges.
- voice.output.gain.value=Math.max(.85,1.2/(1+Math.max(0,distance-30)/480));
- const filter=context.createBiquadFilter();filter.type='lowpass';filter.frequency.value=2300;filter.Q.value=.5;filter.connect(voice.output);voice.nodes.push(filter);
- // Two reeds and a breathy upper partial give large vessels a foghorn and
- // smaller boats a sharper double toot. Keep peaks below the master headroom.
- const pulses=kind==='longtail'||kind==='fishing'||kind==='electric'?[0,.42]:[0];
- for(const delay of pulses)for(const [ratio,level,type]of [[1,.34,'sawtooth'],[1.255,.22,'triangle'],[2,.17,'sine'],[3,.07,'triangle']]){
+ voice.output.gain.value=Math.max(1.9,2.05/(1+Math.max(0,distance-35)/900));
+ const filter=context.createBiquadFilter();filter.type='lowpass';filter.frequency.value=2900;filter.Q.value=.5;filter.connect(voice.output);voice.nodes.push(filter);
+ // An insistent short/long double blast, with midrange reeds that cut through
+ // the mix on small speakers. Music and the rest of the scene stay at full level.
+ for(const [delay,duration]of [[0,.19],[.29,.49]])for(const [ratio,level,type]of [[1,.28,'sawtooth'],[1.255,.24,'sawtooth'],[2,.2,'triangle'],[3,.12,'sine']]){
   const o=context.createOscillator(),g=context.createGain(),start=t+delay;
-  g.gain.setValueAtTime(0,start);g.gain.linearRampToValueAtTime(level,start+.035);
-  g.gain.linearRampToValueAtTime(level*.88,start+duration*.68);
+  g.gain.setValueAtTime(0,start);g.gain.linearRampToValueAtTime(level,start+.018);
+  g.gain.linearRampToValueAtTime(level*.92,start+duration*.8);
   g.gain.exponentialRampToValueAtTime(.0001,start+duration);
-  o.type=type;o.frequency.setValueAtTime(frequency*ratio*.94,t+delay);o.frequency.exponentialRampToValueAtTime(frequency*ratio,t+delay+.07);
+  o.type=type;o.frequency.setValueAtTime(frequency*ratio*.985,t+delay);o.frequency.exponentialRampToValueAtTime(frequency*ratio,t+delay+.035);
   o.connect(g).connect(filter);voice.nodes.push(g);voice.add(o);o.start(t+delay);o.stop(t+delay+duration+.02);
  }
  return voice;
