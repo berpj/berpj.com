@@ -2,13 +2,14 @@ import {capsuleContact} from './simulation.mjs';
 
 // Predict contact using the same hulls as the simulation, including the full
 // length of a cruise ship or barge. Re-evaluate as either vessel changes course.
-export function collisionCourse(player,other,horizon=2.8){
+export function collisionCourse(player,other,horizon=5){
  const speed=Math.hypot(player.vx,player.vz);
  if(speed<3)return null;
  const a={...player,length:12,width:2.5},dx=other.x-a.x,dz=other.z-a.z;
  const vx=other.vx-a.vx,vz=other.vz-a.vz,relativeSpeed=Math.hypot(vx,vz),distance=Math.hypot(dx,dz);
  if(relativeSpeed<1||dx*vx+dz*vz>=-distance)return null;
- if(distance>relativeSpeed*horizon+(a.length+other.length)/2+3)return null;
+ const margin=Math.min(4,Math.max(2,speed*.075));
+ if(distance>relativeSpeed*horizon+(a.length+other.length)/2+margin)return null;
  const gapAt=t=>capsuleContact(a,{...other,x:other.x+vx*t,z:other.z+vz*t}).gap;
  if(gapAt(0)<=0)return null;
  // Distance between two translating convex hulls is convex. Minimise it first,
@@ -21,9 +22,9 @@ export function collisionCourse(player,other,horizon=2.8){
  let closest=(lo+hi)/2;
  if(gapAt(horizon)<gapAt(closest))closest=horizon;
  const clearance=gapAt(closest);
- if(clearance>1.2)return null;
+ if(clearance>margin)return null;
  lo=0;hi=closest;
- for(let i=0;i<14;i++){const mid=(lo+hi)/2;if(gapAt(mid)>1.2)lo=mid;else hi=mid;}
+ for(let i=0;i<14;i++){const mid=(lo+hi)/2;if(gapAt(mid)>margin)lo=mid;else hi=mid;}
  return {time:hi,clearance,distance};
 }
 
@@ -37,16 +38,19 @@ export class TrafficWarnings{
   const candidates=new Map();
   for(const target of traffic){
    const source=target.convoy?.tug||target;
-   if((this.cooldowns.get(source)||0)>this.clock)continue;
    const course=collisionCourse(player,target);
+   const sinceHorn=this.clock-(this.cooldowns.get(source)??-Infinity);
+   // Repeat a sustained threat while there is still room to dodge. A new,
+   // urgent threat need not wait behind an unrelated vessel's long cooldown.
+   if(sinceHorn<2.5&&(!course||course.time>2||sinceHorn<1.5))continue;
    if(course&&(!candidates.has(source)||course.time<candidates.get(source).time))candidates.set(source,{...course,source});
   }
-  const eligible=[...candidates.values()].filter(c=>this.pending.has(c.source)||c.time<.9);
+  const eligible=[...candidates.values()].filter(c=>this.pending.has(c.source)||c.time<1.6);
   this.pending=new Set(candidates.keys());
   if(this.clock<this.nextHorn||!eligible.length)return null;
   eligible.sort((a,b)=>a.time-b.time);
   const warning=eligible[0],dx=warning.source.x-player.x,dz=warning.source.z-player.z,distance=Math.hypot(dx,dz);
-  this.cooldowns.set(warning.source,this.clock+6.5);this.nextHorn=this.clock+1.2;
+  this.cooldowns.set(warning.source,this.clock);this.nextHorn=this.clock+.9;
   return {...warning,distance,pan:Math.max(-.85,Math.min(.85,(dx*Math.cos(cameraHeading)-dz*Math.sin(cameraHeading))/Math.max(distance,1)))};
  }
 }
