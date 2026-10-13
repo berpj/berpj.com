@@ -9,7 +9,7 @@ import {createWorld} from './world.js';
 import {createBoat,boatSpecs} from './boats.js';
 import {createCargoBoat,cargoSpecs} from './cargo.js';
 import {resetPatrols,updatePatrols,updatePatrolLamps,patrolLightFixtures} from './patrols.mjs';
-import {createFleet,advanceFleet} from './traffic.mjs';
+import {createFleet,advanceFleet,trafficMotion} from './traffic.mjs';
 import {createTrafficBoat,updateTrafficDetail} from './traffic-visuals.js';
 import {createTowlines} from './towlines.js';
 import {simplifyBoatReflections} from './reflections.js';
@@ -106,9 +106,9 @@ function stepTraffic(dt){
  for(const t of traffic){
   t.mesh.visible=t.active!==false;if(!t.mesh.visible)continue;
   if(t.kind==='patrol')updatePatrolLamps(t,simTime);
-  const roll=t.towed?.0015:.006,bob=t.towed?.025:.08;
-  t.mesh.position.set(t.x,Math.sin(simTime*1.4+t.distance)*bob,t.z);
-  t.mesh.rotation.set((t.kind==='patrol'?.035*clamp(t.actualSpeed/43,0,1):0)+Math.sin(simTime+t.distance)*roll*.6,t.heading,Math.sin(simTime*.7+t.distance)*roll);
+  const motion=trafficMotion(t,simTime);
+  t.mesh.position.set(t.x,motion.y,t.z);
+  t.mesh.rotation.set(motion.pitch,t.heading,motion.roll);
   t.wakeClock+=dt;
   if(!t.towed&&t.wakeClock>.32&&(t.x-boat.x)**2+(t.z-boat.z)**2<450**2){t.wakeClock=0;wake.emit(t.x+Math.sin(t.heading)*t.length/2,t.z+Math.cos(t.heading)*t.length/2,t.heading,t.actualSpeed,t.width*.12);}
  }

@@ -84,3 +84,16 @@ export function advanceFleet(fleet,river,dt){
     t.vx=-Math.sin(t.heading)*t.actualSpeed;t.vz=-Math.cos(t.heading)*t.actualSpeed;
   }
 }
+
+// A fixed per-boat phase keeps forward speed, river bends and route wrapping
+// from speeding up or resetting the water motion. Heavy hulls barely rock.
+export function trafficMotion(actor,time){
+ const heavy=actor.towed||actor.kind==='barge'||actor.kind==='cruise';
+ const medium=actor.kind==='ferry'||actor.kind==='electric'||actor.kind==='tug';
+ const heave=heavy?.012:medium?.022:.035,rock=heavy?.00065:medium?.0014:.003;
+ const rhythm=heavy?.65:medium?.85:1.05,phase=(actor.variation??0)*2.3999632297;
+ const trim=actor.kind==='patrol'?.035*clamp(actor.actualSpeed/43,0,1):0;
+ return {y:Math.sin(time*rhythm+phase)*heave,
+  pitch:trim+Math.sin(time*rhythm*.8+phase+1.2)*rock*.6,
+  roll:Math.sin(time*rhythm*.67+phase)*rock};
+}
